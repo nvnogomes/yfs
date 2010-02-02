@@ -31,7 +31,7 @@
  requests)
 
  In order to delete a connection object, we must maintain reference count to
- ensure that there are outstanding references to a deleted object. For rpcc,
+ ensure that there are no outstanding references to a to-be-deleted object. For rpcc,
  multiple client threads might be invoking the rpcc::call() functions and thus
  holding multiple references to the underlying connection object. For rpcs,
  multiple dispatch threads might be holding references to the same connection
@@ -71,6 +71,7 @@
 #include <netdb.h>
 
 #include "jsl_log.h"
+#include "gettime.h"
 
 const rpcc::TO rpcc::to_max = { 120000 };
 const rpcc::TO rpcc::to_min = { 1000 };
@@ -129,6 +130,8 @@ rpcc::rpcc(sockaddr_in d, bool retrans) :
 //are blocked inside rpcc or will use rpcc in the future
 rpcc::~rpcc()
 {
+	jsl_log(JSL_DBG_2, "rpcc::~rpcc delete nonce %d channo=%d\n", 
+			clt_nonce_, chan_?chan_->channo():-1); 
 	if (chan_) {
 		chan_->closeconn();
 		chan_->decref();

@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <sys/types.h>
 #include <netinet/tcp.h>
 #include <errno.h>
 #include <signal.h>
@@ -40,6 +41,7 @@ connection::~connection()
 	if (rpdu_.buf)
 		free(rpdu_.buf);
 	assert(!wpdu_.buf);
+	close(fd_);
 }
 
 void
@@ -71,7 +73,6 @@ connection::closeconn()
 	//after block_remove_fd, select will never wait on fd_ 
 	//and no callbacks will be active
 	PollMgr::Instance()->block_remove_fd(fd_);
-	close(fd_);
 }
 
 void
@@ -126,7 +127,6 @@ connection::send(char *b, int sz)
 	if (!writepdu()) {
 		PollMgr::Instance()->del_callback(fd_, CB_RDWR);
 		dead_ = true;
-		close(fd_);
 	}else{
 		if (wpdu_.solong == wpdu_.sz) {
 		}else{
@@ -159,7 +159,6 @@ connection::write_cb(int s)
 	if (!writepdu()) {
 		PollMgr::Instance()->del_callback(fd_, CB_RDWR);
 		dead_ = true;
-		close(fd_);
 	}else{
 		assert(wpdu_.solong >= 0);
 		if (wpdu_.solong < wpdu_.sz) {
@@ -187,7 +186,6 @@ connection::read_cb(int s)
 	if (!succ) {
 		PollMgr::Instance()->del_callback(fd_,CB_RDWR);
 		dead_ = true;
-		close(fd_);
 		pthread_cond_signal(&send_complete_);
 	}
 

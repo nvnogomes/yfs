@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include <map>
 
@@ -48,7 +49,7 @@ class connection : public aio_callback {
 		bool writepdu();
 
 		chanmgr *mgr_;
-		int fd_;
+		const int fd_;
 		bool dead_;
 
 		charbuf wpdu_;

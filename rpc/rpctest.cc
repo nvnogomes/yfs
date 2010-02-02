@@ -8,6 +8,7 @@
 #include <string.h>
 #include <getopt.h>
 #include "jsl_log.h"
+#include "gettime.h"
 
 #define NUM_CL 2
 
