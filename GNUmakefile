@@ -1,6 +1,7 @@
 LAB=1
 SOL=1
 RPC=./rpc
+LAB2GE=$(shell expr $(LAB) \>\= 2)
 LAB4GE=$(shell expr $(LAB) \>\= 4)
 LAB5GE=$(shell expr $(LAB) \>\= 5)
 LAB6GE=$(shell expr $(LAB) \>\= 6)
@@ -14,7 +15,11 @@ else
 MACFLAGS=
 endif
 LDFLAGS = -L. -L/usr/local/lib
+ifeq ($(LAB2GE),1)
 LDLIBS = -lfuse -lpthread 
+else
+LDLIBS = -lpthread 
+endif
 LDLIBS += $(shell test -f `gcc -print-file-name=librt.so` && echo -lrt)
 LDLIBS += $(shell test -f `gcc -print-file-name=libdl.so` && echo -ldl)
 CC = g++
