@@ -230,21 +230,21 @@ rpcc::call1(unsigned int proc, marshall &req, unmarshall &rep,
 		curr_to.to <<= 1;
 	}
 
-	ScopedLock cal(&ca.m);
-
-	jsl_log(JSL_DBG_2, 
-			"rpcc::call1 %u wait over for req proc %x xid %u %s:%d done? %d ret %d \n", 
-			clt_nonce_, proc, ca.xid, inet_ntoa(dst_.sin_addr),
-			ntohs(dst_.sin_port), ca.done, ca.intret);
-
 	{ 
-		ScopedLock ml(&m_); 
+		ScopedLock ml(&m_); //no locking of ca.m because no one but this thread changes ca.xid 
 		calls_.erase(ca.xid);
 		// we potentially need to update the xid again here, in case the
 		// packet times out before it's even sent by the channel.  nasty.
 		// but I don't think there's any harm in potentially doing it twice
 		update_xid_rep(ca.xid);
 	}
+
+	ScopedLock cal(&ca.m);
+
+	jsl_log(JSL_DBG_2, 
+			"rpcc::call1 %u wait over for req proc %x xid %u %s:%d done? %d ret %d \n", 
+			clt_nonce_, proc, ca.xid, inet_ntoa(dst_.sin_addr),
+			ntohs(dst_.sin_port), ca.done, ca.intret);
 
 	if (ch)
 		ch->decref();
