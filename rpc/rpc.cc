@@ -200,7 +200,7 @@ rpcc::call1(unsigned int proc, marshall &req, unmarshall &rep,
 						"rpcc::call1 %u just sent req proc %x xid %u clt_nonce %d\n", 
 						clt_nonce_, proc, ca.xid, clt_nonce_); 
 			}
-			transmit = false; //only send once on a given channel
+			transmit = false;
 		}
 
 		if (!finaldeadline.tv_sec)
@@ -223,8 +223,8 @@ rpcc::call1(unsigned int proc, marshall &req, unmarshall &rep,
 				break;
 		}
 
-		if (retrans_ && (!ch || ch->isdead())) {
-			//since connection is dead, we retransmit on the new connection 
+		// always retransmit even if the connection is still good
+		if (retrans_) {
 			transmit = true; 
 		}
 		curr_to.to <<= 1;
