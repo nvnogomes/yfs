@@ -344,10 +344,18 @@ tcpsconn::process_accept()
 	jsl_log(JSL_DBG_2, "accept_loop got connection fd=%d %s:%d\n", 
 			s1, inet_ntoa(sin.sin_addr), ntohs(sin.sin_port));
 	connection *ch = new connection(mgr_, s1, lossy_);
-	if (conns_.find(ch->channo())!=conns_.end()) {
-		//previous connection with the same fd is dead, garbage collect it
-		conns_[ch->channo()]->decref();
-	}
+
+        // garbage collect all dead connections with refcount of 1
+        std::map<int, connection *>::iterator i;
+        for (i = conns_.begin(); i != conns_.end(); i++) {
+                if (i->second->isdead() && i->second->ref() == 1) {
+			jsl_log(JSL_DBG_2, "accept_loop garbage collected fd=%d\n",
+					i->second->channo());
+                        i->second->decref();
+                        conns_.erase(i);
+                }
+        }
+
 	conns_[ch->channo()] = ch;
 }
 
