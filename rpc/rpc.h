@@ -277,6 +277,9 @@ class rpcs : public chanmgr {
 
 	void updatestat(unsigned int proc);
 
+	// latest connection to the client
+	std::map<unsigned int, connection *> conns_;
+
 	// counting
 	const int counting_;
 	int curr_counts_;
@@ -290,6 +293,7 @@ class rpcs : public chanmgr {
 	pthread_mutex_t procs_m_; // protect insert/delete to procs[]
 	pthread_mutex_t count_m_;  //protect modification of counts
 	pthread_mutex_t reply_window_m_; // protect reply window et al
+	pthread_mutex_t conss_m_; // protect conns_
 
 
 	protected:

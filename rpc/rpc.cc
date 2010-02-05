@@ -345,6 +345,7 @@ rpcs::rpcs(unsigned int p1, int count)
 	assert(pthread_mutex_init(&procs_m_, 0) == 0);
 	assert(pthread_mutex_init(&count_m_, 0) == 0);
 	assert(pthread_mutex_init(&reply_window_m_, 0) == 0);
+	assert(pthread_mutex_init(&conss_m_, 0) == 0);
 
 	set_rand_seed();
 	nonce_ = random();
@@ -471,7 +472,6 @@ rpcs::dispatch(djob_t *j)
 	int sz1;
 
 	if (h.clt_nonce) {
-
 		//have i seen this client before?
 		{
 			ScopedLock rwl(&reply_window_m_);
@@ -483,6 +483,20 @@ rpcs::dispatch(djob_t *j)
 						h.clt_nonce, h.xid, c->channo(), (int)reply_window_.size());
 			}
 		}
+
+		// save the latest good connection to the client
+		{
+			ScopedLock rwl(&conss_m_);
+			if (conns_.find(h.clt_nonce) == conns_.end()) {
+				c->incref();
+				conns_[h.clt_nonce] = c;
+			} else if (conns_[h.clt_nonce] != c){
+				conns_[h.clt_nonce]->decref();
+				c->incref();
+				conns_[h.clt_nonce] = c;
+			}
+		}
+
 		stat = checkduplicate_and_update(h.clt_nonce, h.xid, h.xid_rep, &b1, &sz1);
 	} else {
 		//this client does not require at most once logic
@@ -510,6 +524,17 @@ rpcs::dispatch(djob_t *j)
 				//only record replies for clients that require at-most-once logic
 				add_reply(h.clt_nonce, h.xid, b1, sz1);
 			}
+
+			// get the latest connection to the client
+			{
+				ScopedLock rwl(&conss_m_);
+				if (c->isdead() && c != conns_[h.clt_nonce]) {
+					c->decref();
+					c = conns_[h.clt_nonce];
+					c->incref();
+				}
+			}
+
 			c->send(b1, sz1);
 			if (h.clt_nonce == 0) {
 				//reply is not added to at-most-once window, free it
