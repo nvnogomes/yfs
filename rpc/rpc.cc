@@ -374,10 +374,10 @@ bool
 rpcs::got_pdu(connection *c, char *b, int sz)
 {
 	djob_t *j = new djob_t(c, b, sz);
+	c->incref();
 	bool succ = dispatchpool_->addObjJob(this, &rpcs::dispatch, j);
-	if (succ) {
-		c->incref();
-	}else{
+	if (!succ) {
+		c->decref();
 		delete j;
 	}
 	return succ; 
