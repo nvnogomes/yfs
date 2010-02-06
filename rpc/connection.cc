@@ -65,7 +65,7 @@ connection::closeconn()
 		ScopedLock ml(&m_);
 		if (!dead_) {
 			dead_ = true;
-			assert(shutdown(fd_,SHUT_RDWR)==0);
+			shutdown(fd_,SHUT_RDWR);
 		}else{
 			return;
 		}
@@ -120,13 +120,15 @@ connection::send(char *b, int sz)
 	if (lossy_) {
 		if ((random()%100) < lossy_) {
 			jsl_log(JSL_DBG_1, "connection::send LOSSY TEST shutdown fd_ %d\n", fd_);
-			assert(shutdown(fd_,SHUT_RDWR)==0);
+			shutdown(fd_,SHUT_RDWR);
 		}
 	}
 
 	if (!writepdu()) {
-		PollMgr::Instance()->del_callback(fd_, CB_RDWR);
 		dead_ = true;
+		assert(pthread_mutex_unlock(&m_) == 0);
+		PollMgr::Instance()->block_remove_fd(fd_);
+		assert(pthread_mutex_lock(&m_) == 0);
 	}else{
 		if (wpdu_.solong == wpdu_.sz) {
 		}else{

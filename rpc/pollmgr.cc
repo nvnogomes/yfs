@@ -60,11 +60,11 @@ PollMgr::add_callback(int fd, poll_flag flag, aio_callback *ch)
 void
 PollMgr::block_remove_fd(int fd)
 {
-	del_callback(fd, CB_RDWR);
-
 	ScopedLock ml(&m_);
+	aio_->unwatch_fd(fd, CB_RDWR);
 	pending_change_ = true;
 	assert(pthread_cond_wait(&changedone_c_, &m_)==0);
+	callbacks_[fd] = NULL;
 }
 
 void
