@@ -333,7 +333,7 @@ rpcc::update_xid_rep(unsigned int xid)
 compress:
 	it = xid_rep_window_.begin();
 	for (it++; it != xid_rep_window_.end(); it++) {
-		if (xid_rep_window_.front() + 1 == *it)
+		while (xid_rep_window_.front() + 1 == *it)
 			xid_rep_window_.pop_front();
 	}
 }
