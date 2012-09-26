@@ -25,10 +25,13 @@ std::map<lock_protocol::lockid_t,
 
 
 pthread_mutex_t mutex;
+pthread_mutex_t mutex_release;
 pthread_cond_t freetogo;
-lock_server::lock_server():nacquire (0)
+lock_server::lock_server():
+	nacquire (0)
 {
 	pthread_mutex_init(&mutex, NULL);
+	pthread_mutex_init(&mutex_release, NULL);
 	pthread_cond_init (&freetogo, NULL);
 }
 
@@ -41,12 +44,17 @@ lock_server::stat(int clt, lock_protocol::lockid_t lid, int &r)
   return ret;
 }
 
+/*
+ * ACQUIRE
+ */
 lock_protocol::status
 lock_server::acquire(int clt, lock_protocol::lockid_t lid, int &r) {
+
 	pthread_mutex_lock(&mutex);
-	if(blockMap.find(lid) != blockMap.end() && blockMap[lid].first == true ) {
+	while( blockMap[lid].first == true ) {
 		pthread_cond_wait(&freetogo, &mutex);
 	}
+
 	blockMap[lid].first = true;
 	blockMap[lid].second = clt;
 	pthread_mutex_unlock(&mutex);
@@ -57,25 +65,18 @@ lock_server::acquire(int clt, lock_protocol::lockid_t lid, int &r) {
 
 
 /*
- * if the block is locked then its unlocked.
- * this will always return OK because unlock
- * a block that already is unlock should not
- * be considered as an error (?)
- *
- * @return lock_protocol::OK
+ * RELEASE
  */
 lock_protocol::status
 lock_server::release(int clt, lock_protocol::lockid_t lid, int &r) {
-	lock_protocol::status ret;
 
 	pthread_mutex_lock(&mutex);
 	if(blockMap[lid].first == true && blockMap[lid].second == clt) {
-			blockMap[lid] = std::make_pair(false, -1);
-			pthread_cond_signal(&freetogo);
-			ret = lock_protocol::OK;
-		}
+		blockMap[lid] = std::make_pair(false, -1);
+		pthread_cond_signal(&freetogo);
+	}
 	pthread_mutex_unlock(&mutex);
 	r = nacquire;
-	return ret;
+	return lock_protocol::OK;
 }
 
