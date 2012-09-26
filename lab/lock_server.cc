@@ -45,18 +45,22 @@ lock_protocol::status
 lock_server::acquire(int clt, lock_protocol::lockid_t lid, int &r) {
 	lock_protocol::status toReturn;
 	
-	pthread_mutex_lock(&mutex);
+//	pthread_mutex_lock(&mutex);
 	if( blockMap[lid].first == false ) {
+		pthread_mutex_lock(&mutex);
 		blockMap[lid].first = true;
 		blockMap[lid].second = clt;
+		pthread_mutex_unlock(&mutex);
 		toReturn = lock_protocol::OK;
 	} else {
+		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&freetogo, &mutex);
 		blockMap[lid].first = true;
 		blockMap[lid].second = clt;
+		pthread_mutex_unlock(&mutex);
 		toReturn = lock_protocol::OK;
 	}	
-	pthread_mutex_unlock(&mutex);
+//	pthread_mutex_unlock(&mutex);
 
 	r = nacquire;
 	return toReturn;
@@ -75,15 +79,17 @@ lock_protocol::status
 lock_server::release(int clt, lock_protocol::lockid_t lid, int &r) {
 	int ret = lock_protocol::RETRY;
 
-	pthread_mutex_lock(&mutex);
+//	pthread_mutex_lock(&mutex);
 	if( blockMap[lid].first == true ) {
 		if( blockMap[lid].second == clt ) {
+			pthread_mutex_lock(&mutex);
 			blockMap[lid] = std::make_pair(false, -1);
 			pthread_cond_signal(&freetogo);
-			ret = lock_protocol::OK;
+			pthread_mutex_unlock(&mutex);
+			return lock_protocol::OK;
 			}
 		}
-	pthread_mutex_unlock(&mutex);
+//	pthread_mutex_unlock(&mutex);
 	sleep(0.01);
 	r = nacquire;
 	return ret;
