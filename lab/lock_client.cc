@@ -36,15 +36,16 @@ lock_client::stat(lock_protocol::lockid_t lid)
 int
 lock_client::acquire(lock_protocol::lockid_t lid)
 {
-	int r;
-	while(1) {
-		int ret = cl->call(lock_protocol::acquire, cl->id(), lid, r);
+//	int r;
+//	while(1) {
+//		int ret = cl->call(lock_protocol::acquire, cl->id(), lid, r);
 
-		if( ret == lock_protocol::OK ) {
-			break;
-		}
-		sleep(2000);
-	}
+//		if( ret == lock_protocol::OK ) {
+//			break;
+//		}
+//		sleep(2000);
+//	}
+	int r = cl->call(lock_protocol::acquire, cl->id(), lid, r);
 
 	return r;
 }
