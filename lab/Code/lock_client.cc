@@ -24,7 +24,9 @@ int
 lock_client::stat(lock_protocol::lockid_t lid)
 {
   int r;
-  return cl->call(lock_protocol::stat, cl->id(), lid, r);;
+  int ret = cl->call(lock_protocol::stat, cl->id(), lid, r);
+  assert (ret == lock_protocol::OK);
+  return r;
 }
 
 
@@ -34,9 +36,8 @@ lock_client::stat(lock_protocol::lockid_t lid)
 int
 lock_client::acquire(lock_protocol::lockid_t lid)
 {
-	int r;
-	return cl->call(lock_protocol::acquire, cl->id(), lid, r);
-
+	int r = cl->call(lock_protocol::acquire, cl->id(), lid, r);
+	return r;
 }
 
 int

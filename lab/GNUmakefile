@@ -16,9 +16,9 @@ MACFLAGS=
 endif
 LDFLAGS = -L. -L/usr/local/lib
 ifeq ($(LAB2GE),1)
-LDLIBS = -lfuse -lpthread 
+LDLIBS = -lfuse -lpthread
 else
-LDLIBS = -lpthread 
+LDLIBS = -lpthread
 endif
 LDLIBS += $(shell test -f `gcc -print-file-name=librt.so` && echo -lrt)
 LDLIBS += $(shell test -f `gcc -print-file-name=libdl.so` && echo -ldl)
@@ -167,7 +167,7 @@ l7-sol:
 	./mklab.pl 7 7 l7-sol GNUmakefile test-lab-4-a.pl $(yfs_client) $(rpclib) $(rpctest) $(lock_server) \
 		$(extent_server) $(lock_server) start.sh stop.sh test-lab-2.pl mkfs.sh\
 		$(hfiles1) $(hfiles2) $(hfiles3) $(lock_tester) $(test-lab-4-b) $(test-lab-4-c)\
-		rsm_tester.pl $(rsm_files) $(hfiles4) 
+		rsm_tester.pl $(rsm_files) $(hfiles4)
 
 l8:
 	./mklab.pl 8 0 l8 GNUmakefile rsm_client.cc $(hfiles5) rsm.cc rsm.h
@@ -176,10 +176,10 @@ l8-sol:
 	./mklab.pl 8 8 l8-sol GNUmakefile test-lab-4-a.pl $(yfs_client) $(rpclib) $(rpctest) $(lock_server) \
 		$(extent_server) $(lock_server) start.sh stop.sh test-lab-2.pl mkfs.sh\
 		$(hfiles1) $(hfiles2) $(hfiles3) $(lock_tester) $(test-lab-4-b) $(test-lab-4-c)\
-		rsm_tester.pl $(rsm_files) $(hfiles4) rsm_client.cc $(hfiles5) 
+		rsm_tester.pl $(rsm_files) $(hfiles4) rsm_client.cc $(hfiles5)
 
 -include *.d
 
 .PHONY : clean
-clean : 
+clean :
 	rm -rf rpc/rpctest rpc/*.o rpc/*.d rpc/librpc.a *.o *.d yfs_client extent_server lock_server lock_tester lock_demo rpctest test-lab-4-b test-lab-4-c
