@@ -10,15 +10,15 @@
 #include <arpa/inet.h>
 
 
-
-
 /*
  * this is the main structure to control the status
  * of the blocks. this also can control the owner of
  * the lock to avoid forced unlocks by other clients
+ *
+ * boolean: TRUE -> LOCKED
  */
 std::map<lock_protocol::lockid_t,
-	std::pair<blockStatus,int> > blockMap;
+	std::pair<bool,int> > blockMap;
 
 
 lock_server::lock_server():
@@ -39,8 +39,8 @@ lock_protocol::status
 lock_server::acquire(int clt, lock_protocol::lockid_t lid, int &r) {
 
 	lock_protocol::status toReturn;
-	if( blockMap[lid].first == blockStatus::FREE ) {
-		blockMap[lid].first = blockStatus::LOCKED;
+	if( blockMap[lid].first == false ) {
+		blockMap[lid].first = true;
 		blockMap[lid].second = clt;
 		toReturn = lock_protocol::OK;
 	}
@@ -64,9 +64,9 @@ lock_server::acquire(int clt, lock_protocol::lockid_t lid, int &r) {
 lock_protocol::status
 lock_server::release(int clt, lock_protocol::lockid_t lid, int &r) {
 
-	if( blockMap[lid].first == blockStatus::LOCKED ) {
+	if( blockMap[lid].first == true ) {
 		if( blockMap[lid].second == clt ) {
-			blockMap[lid] = std::make_pair(blockStatus::FREE, -1);
+			blockMap[lid] = std::make_pair(false, -1);
 		}
 	}
 	r = nacquire;
