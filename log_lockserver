@@ -2,3 +2,4 @@ CHANGES FROM ORIGINAL CODE
 	add methods acquire and release in lock_server head
 	create acquire and release methods in lock_server
 	register acquire and release methods in lock_smain
+	added mutual exclusion

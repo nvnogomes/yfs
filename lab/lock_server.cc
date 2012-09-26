@@ -25,7 +25,6 @@ std::map<lock_protocol::lockid_t,
 
 
 pthread_mutex_t mutex;
-pthread_mutex_t mutex_release;
 pthread_cond_t freetogo;
 lock_server::lock_server():
 	nacquire (0)
