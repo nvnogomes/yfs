@@ -8,6 +8,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <pthread.h>
+
+using namespace std;
 
 
 /*
@@ -21,9 +24,12 @@ std::map<lock_protocol::lockid_t,
 	std::pair<bool,int> > blockMap;
 
 
-lock_server::lock_server():
-  nacquire (0)
+pthread_mutex_t mutex;
+pthread_cond_t freetogo;
+lock_server::lock_server():nacquire (0)
 {
+	pthread_mutex_init(&mutex, NULL);
+	pthread_cond_init (&freetogo, NULL);
 }
 
 lock_protocol::status
@@ -37,19 +43,16 @@ lock_server::stat(int clt, lock_protocol::lockid_t lid, int &r)
 
 lock_protocol::status
 lock_server::acquire(int clt, lock_protocol::lockid_t lid, int &r) {
-
-	lock_protocol::status toReturn;
-	if( blockMap[lid].first == false ) {
-		blockMap[lid].first = true;
-		blockMap[lid].second = clt;
-		toReturn = lock_protocol::OK;
+	pthread_mutex_lock(&mutex);
+	if(blockMap.find(lid) != blockMap.end() && blockMap[lid].first == true ) {
+		pthread_cond_wait(&freetogo, &mutex);
 	}
-	else {
-		toReturn = lock_protocol::RETRY;
-	}
+	blockMap[lid].first = true;
+	blockMap[lid].second = clt;
+	pthread_mutex_unlock(&mutex);
 
 	r = nacquire;
-	return toReturn;
+	return lock_protocol::OK;
 }
 
 
@@ -63,13 +66,16 @@ lock_server::acquire(int clt, lock_protocol::lockid_t lid, int &r) {
  */
 lock_protocol::status
 lock_server::release(int clt, lock_protocol::lockid_t lid, int &r) {
+	lock_protocol::status ret;
 
-	if( blockMap[lid].first == true ) {
-		if( blockMap[lid].second == clt ) {
+	pthread_mutex_lock(&mutex);
+	if(blockMap[lid].first == true && blockMap[lid].second == clt) {
 			blockMap[lid] = std::make_pair(false, -1);
+			pthread_cond_signal(&freetogo);
+			ret = lock_protocol::OK;
 		}
-	}
+	pthread_mutex_unlock(&mutex);
 	r = nacquire;
-	return lock_protocol::OK;
+	return ret;
 }
 
