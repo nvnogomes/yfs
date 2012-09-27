@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 
+
 lock_client::lock_client(std::string dst)
 {
   sockaddr_in dstsock;
@@ -24,7 +25,7 @@ int
 lock_client::stat(lock_protocol::lockid_t lid)
 {
   int r;
-  return cl->call(lock_protocol::stat, cl->id(), lid, r);;
+  return cl->call(lock_protocol::stat, cl->id(), lid, r);
 }
 
 

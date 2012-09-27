@@ -36,10 +36,9 @@ lock_server::lock_server():
 lock_protocol::status
 lock_server::stat(int clt, lock_protocol::lockid_t lid, int &r)
 {
-  lock_protocol::status ret = lock_protocol::OK;
   printf("stat server client: %d\n", clt);
   r = nacquire;
-  return ret;
+  return lock_protocol::OK;
 }
 
 /*
