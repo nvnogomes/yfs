@@ -30,7 +30,6 @@ lock_server::lock_server():
 	nacquire (0)
 {
 	pthread_mutex_init(&mutex, NULL);
-	pthread_mutex_init(&mutex_release, NULL);
 	pthread_cond_init (&freetogo, NULL);
 }
 
