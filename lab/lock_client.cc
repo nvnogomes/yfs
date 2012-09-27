@@ -24,8 +24,10 @@ lock_client::lock_client(std::string dst)
 int
 lock_client::stat(lock_protocol::lockid_t lid)
 {
-  int r;
-  return cl->call(lock_protocol::stat, cl->id(), lid, r);
+	int r;
+	int ret = cl->call(lock_protocol::stat, cl->id(), lid, r);
+	assert (ret == lock_protocol::OK);
+	return r;
 }
 
 

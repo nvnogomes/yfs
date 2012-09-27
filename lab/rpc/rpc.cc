@@ -566,10 +566,8 @@ rpcs::add_reply(unsigned int clt_nonce, unsigned int xid,
 		char *b, int sz)
 {
 
-	std::map<unsigned int,std::list<reply_t> >::iterator clt;
-	std::list<reply_t>::iterator it;
-
 	ScopedLock rwl(&reply_window_m_);
+	std::list<reply_t>::iterator it;
 
 	if( reply_window_.find( clt_nonce ) != reply_window_.end() ) {
 
@@ -601,49 +599,53 @@ rpcs::free_reply_window(void)
 	reply_window_.clear();
 }
 
-/*eliminate duplicate xid and update the appropriate information to help the server safely forget about certain received RPCs.
- *
- * 	NEW,  		// new RPC, not a duplicate
-	INPROGRESS, // duplicate of an RPC we're still processing
-	DONE, 		// duplicate of an RPC we already replied to (have reply)
-	FORGOTTEN,  // duplicate of an old RPC whose reply we've forgotten
+/*
+ * eliminate duplicate xid and update the appropriate information to help the server safely forget about certain received RPCs.
 */
 rpcs::rpcstate_t
 rpcs::checkduplicate_and_update(unsigned int clt_nonce, unsigned int xid,
 		unsigned int xid_rep, char **b, int *sz)
 {
-
-	std::map<unsigned int,std::list<reply_t> >::iterator clt;
+	ScopedLock rwl(&reply_window_m_);
 	std::list<reply_t>::iterator it;
 
-	int first = 0;
-	bool firstAssign = false;
+	int min = reply_window_[clt_nonce].empty() ? 0 : 300000 ;
 
-	ScopedLock rwl(&reply_window_m_);
-	if( reply_window_.find( clt_nonce ) != reply_window_.end() ) {
+	for (it = reply_window_[clt_nonce].begin(); it != reply_window_[clt_nonce].end(); it++) {
 
-		for (it = reply_window_[clt_nonce].begin(); it != reply_window_[clt_nonce].end(); it++) {
+		if( (int)(*it).xid < min ) {
+			min = (*it).xid;
+		}
 
-				if( !firstAssign ) {
-					first = (*it).xid;
-					firstAssign = true;
-				}
+		if( (*it).xid == xid ) {
 
-				if( (*it).xid == xid ) {
-					if( (*it).xid < first ) {
-						return FORGOTTEN;
-					}
+			if( (*it).cb_present ) {
+				*b = (*it).buf;
+				*sz = (*it).sz;
+				return DONE;
+			}
+			else {
+				return INPROGRESS;
+			}
+		}
 
-					if( (*it).cb_present ) {
-						return DONE;
-					}
-					else {
-						return INPROGRESS;
-					}
-				}
+		if( (int)(*it).xid < xid_rep ) {
+			reply_window_[clt_nonce].erase( it );
+			it--;
 		}
 	}
-	return NEW;
+
+	// add new request
+	if( (int)xid > min ) {
+		reply_t aux(xid);
+		reply_window_[clt_nonce].push_front( aux );
+		return NEW;
+	}
+	else {
+		return FORGOTTEN;
+	}
+
+
 }
 
 //rpc handler
