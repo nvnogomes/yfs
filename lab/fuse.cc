@@ -85,13 +85,17 @@ fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr, int to_set
     if (FUSE_SET_ATTR_SIZE & to_set) {
         printf("   fuseserver_setattr set size to %zu\n", attr->st_size);
         struct stat st;
-        // You fill this in
-#if 0
-        fuse_reply_attr(req, &st, 0);
-#else
-        fuse_reply_err(req, ENOSYS);
-#endif
-    } else {
+
+        // FILLED
+
+        if( yfs->getfile(ino,fi) == yfs_client::OK ) {
+            fuse_reply_attr(req, &st, 0);
+        }
+        else {
+            fuse_reply_err(req, ENOSYS);
+        }
+    }
+    else {
         fuse_reply_err(req, ENOSYS);
     }
 }
@@ -100,12 +104,15 @@ void
 fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
                 off_t off, struct fuse_file_info *fi)
 {
-    // You fill this in
-#if 0
-    fuse_reply_buf(req, buf, size);
-#else
-    fuse_reply_err(req, ENOSYS);
-#endif
+    // FILLED
+
+    if( yfs->getfile(ino,fi) == yfs_client::OK ) {
+        fuse_reply_buf(req, buf, size);
+    }
+    else {
+        fuse_reply_err(req, ENOSYS);
+    }
+
 }
 
 void
@@ -114,11 +121,15 @@ fuseserver_write(fuse_req_t req, fuse_ino_t ino,
                  struct fuse_file_info *fi)
 {
     // You fill this in
-#if 0
-    fuse_reply_write(req, bytes_written);
-#else
-    fuse_reply_err(req, ENOSYS);
-#endif
+    if( yfs->getfile(ino,fi) == yfs_client::OK ) {
+
+        //nrg: call yfs_client::write(ino, buf, off, fi)
+
+        fuse_reply_write(req, size/*bytes_written*/);
+    }
+    else {
+        fuse_reply_err(req, ENOSYS);
+    }
 }
 
 yfs_client::status
@@ -126,6 +137,8 @@ fuseserver_createhelper(fuse_ino_t parent, const char *name,
                         mode_t mode, struct fuse_entry_param *e)
 {
     // You fill this in
+    // CREATE
+
     return yfs_client::OK;
 }
 
@@ -157,8 +170,8 @@ fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
     struct fuse_entry_param e;
 //    bool found = false;
 
-    e.attr_timeout = 0.0;
-    e.entry_timeout = 0.0;
+    e.attr_timeout = 1800.0;
+    e.entry_timeout = 1800.0;
 
     // You fill this in:
     // Look up the file named `name' in the directory referred to by
@@ -268,7 +281,15 @@ fuseserver_unlink(fuse_req_t req, fuse_ino_t parent, const char *name)
     // You fill this in
     // Success:	fuse_reply_err(req, 0);
     // Not found:	fuse_reply_err(req, ENOENT);
-    fuse_reply_err(req, ENOSYS);
+
+    yfs_client::inum ino = yfs->ilookup(parent, name);
+    if( ino > 0 ) {
+        fuse_reply_err(req, 0);
+    }
+    else {
+        fuse_reply_err(req, ENOENT);
+    }
+
 }
 
 void

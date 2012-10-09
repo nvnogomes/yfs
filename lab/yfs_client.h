@@ -44,6 +44,12 @@ public:
 
     int getfile(inum, fileinfo &);
     int getdir(inum, dirinfo &);
+
+
+    int createDir(inum parent, const char *name);
+    int createFile(inum di, const char *buf);
+
+    int remove(inum di);
 };
 
 #endif 

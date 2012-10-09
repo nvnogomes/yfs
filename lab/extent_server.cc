@@ -53,9 +53,7 @@ extent_server::get(extent_protocol::extentid_t id, std::string &buf)
 int
 extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr &a)
 {
-    // You replace this with a real implementation. We send a phony response
-    // for now because it's difficult to get FUSE to do anything (including
-    // unmount) if getattr fails.
+
     if( fs.find(id) == fs.end() ) {
         return extent_protocol::IOERR;
     }

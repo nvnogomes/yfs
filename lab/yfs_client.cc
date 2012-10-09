@@ -95,10 +95,47 @@ yfs_client::inum
 yfs_client::ilookup(inum di, std::string name) {
     std::string buf;
     if( ec->get(di, buf) == extent_protocol::IOERR ) {
-        return -1;
+        return NOENT;
     }
     else {
         return di;
     }
 }
 
+
+int
+yfs_client::createFile(inum di, const char *buf) {
+    if( ec->put(di, buf) == extent_protocol::OK ) {
+        return OK;
+    }
+    else {
+        return IOERR;
+    }
+}
+
+int
+yfs_client::createDir(inum di, const char *buf) {
+    if( ec->put(di, buf) == extent_protocol::OK ) {
+        return OK;
+    }
+    else {
+        return IOERR;
+    }
+}
+
+
+int
+yfs_client::remove(inum di) {
+
+    if( ilookup(ino) > 0 ) {
+        if( ec->remove(di) == extent_protocol::OK ) {
+            return OK;
+        }
+        else {
+            return IOERR;
+        }
+    }
+    else {
+        return NOENT;
+    }
+}
