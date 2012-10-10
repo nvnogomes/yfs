@@ -5,11 +5,15 @@
 //#include "yfs_protocol.h"
 #include "extent_client.h"
 #include <vector>
+#include <map>
 
 
 class yfs_client {
     extent_client *ec;
-public:
+    unsigned int lastInum;
+
+public:   
+    std::map<inum, std::vector<yfs_client::dirent> > fileSystem;
 
     typedef unsigned long long inum;
     enum xxstatus { OK, RPCERR, NOENT, IOERR, FBIG };
@@ -46,8 +50,11 @@ public:
     int getdir(inum, dirinfo &);
 
 
-    int createDir(inum parent, const char *name);
-    int createFile(inum di, const char *buf);
+    int create(inum parent,
+               const char *name,
+               mode_t mode,
+               fuse_entry_param e,
+               bool isdir);
 
     int remove(inum di);
 };

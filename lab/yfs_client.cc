@@ -8,12 +8,16 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <map>
+#include <vector>
 
 
-yfs_client::yfs_client(std::string extent_dst, std::string lock_dst)
+yfs_client::yfs_client(std::string extent_dst, std::string lock_dst):
+    lastInum(0)
 {
     ec = new extent_client(extent_dst);
-
+    fileSystem ();
+    fileSystem.insert( 0, std::vector() );
 }
 
 yfs_client::inum
@@ -95,7 +99,7 @@ yfs_client::inum
 yfs_client::ilookup(inum di, std::string name) {
     std::string buf;
     if( ec->get(di, buf) == extent_protocol::IOERR ) {
-        return NOENT;
+        return IOERR;
     }
     else {
         return di;
@@ -104,18 +108,28 @@ yfs_client::ilookup(inum di, std::string name) {
 
 
 int
-yfs_client::createFile(inum di, const char *buf) {
-    if( ec->put(di, buf) == extent_protocol::OK ) {
-        return OK;
-    }
-    else {
-        return IOERR;
-    }
-}
+yfs_client::create(inum parent, const char *name, mode_t mode,
+                       fuse_entry_param e, bool isdir) {
 
-int
-yfs_client::createDir(inum di, const char *buf) {
-    if( ec->put(di, buf) == extent_protocol::OK ) {
+    // generate inum
+    // root directory -> 0x000000001
+
+    inum inumByName = yfs_client::n2i( name );
+    inum newEntryInum =  isdir ? inumByName | 0x01 : inumByName;
+
+    if( ec->put(newEntryInum, "") == extent_protocol::OK ) {
+
+        yfs_client::dirent entryStruct;
+        entryStruct.inum = newEntryInum;
+        entryStruct.name = name;
+
+        fileSystem[parent].push_back( entryStruct );
+
+        if( isdir ) {
+            std::vector<yfs_client::dirent> files();
+            fileSystem.insert( newEntryInum, files );
+        }
+
         return OK;
     }
     else {
@@ -127,15 +141,5 @@ yfs_client::createDir(inum di, const char *buf) {
 int
 yfs_client::remove(inum di) {
 
-    if( ilookup(ino) > 0 ) {
-        if( ec->remove(di) == extent_protocol::OK ) {
-            return OK;
-        }
-        else {
-            return IOERR;
-        }
-    }
-    else {
         return NOENT;
-    }
 }

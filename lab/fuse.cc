@@ -105,7 +105,6 @@ fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
                 off_t off, struct fuse_file_info *fi)
 {
     // FILLED
-
     if( yfs->getfile(ino,fi) == yfs_client::OK ) {
         fuse_reply_buf(req, buf, size);
     }
@@ -136,10 +135,9 @@ yfs_client::status
 fuseserver_createhelper(fuse_ino_t parent, const char *name,
                         mode_t mode, struct fuse_entry_param *e)
 {
-    // You fill this in
-    // CREATE
+    // FILLED
+    return yfs_client::create(parent, name, mode, &e, false);
 
-    return yfs_client::OK;
 }
 
 void
@@ -168,10 +166,6 @@ void
 fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
     struct fuse_entry_param e;
-//    bool found = false;
-
-    e.attr_timeout = 1800.0;
-    e.entry_timeout = 1800.0;
 
     // You fill this in:
     // Look up the file named `name' in the directory referred to by
@@ -181,6 +175,8 @@ fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
 
     if( i > 0 ){
         e.ino = i;
+        e.attr_timeout = 1800.0;
+        e.entry_timeout = 1800.0;
         yfs_client.getfile(i, &e);
         fuse_reply_entry(req, &e);
     }
@@ -239,8 +235,17 @@ fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
     }
 
     memset(&b, 0, sizeof(b));
+
     // fill in the b data structure using dirbuf_add
-    dirbuf_add(b, req.name, ino);
+
+    yfs_client::fileSystem::iterator dirIt;
+    for( dirIt = yfs_client::fileSystem[ino].begin() ;
+            dirIt != yfs_client::fileSystem[ino].begin() ; dirIt++ ) {
+
+        dirbuf_add(&b, dirIt->name.c_str(), dirIt->inum );
+    }
+
+
 
     reply_buf_limited(req, b.p, b.size, off, size);
     free(b.p);
@@ -253,11 +258,19 @@ fuseserver_open(fuse_req_t req, fuse_ino_t ino,
 {
     fuseserver_lookup(req, ino,);
 
-#if 0
-    fuse_reply_open(req, fi);
-#else
+    // FILLED
+    if( yfs_client::isdir( ino ) ) {
+        yfs_client::getdir( ino, fi );
+        fuse_reply_open(req, fi);
+        return;
+    }
+    else {
+        yfs_client::getfile( ino, fi );
+        fuse_reply_open(req, fi);
+        return;
+    }
     fuse_reply_err(req, ENOSYS);
-#endif
+
 }
 
 void
@@ -266,12 +279,12 @@ fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 {
     struct fuse_entry_param e;
 
-    // You fill this in
-#if 0
-    fuse_reply_entry(req, &e);
-#else
-    fuse_reply_err(req, ENOSYS);
-#endif
+    if( yfs_client::create(parent, name, mode, &e, true) == yfs_client::OK ) {
+        fuse_reply_entry(req, &e);
+    }
+    else {
+        fuse_reply_err(req, ENOSYS);
+    }
 }
 
 void
@@ -334,7 +347,7 @@ main(int argc, char *argv[])
     fuseserver_oper.statfs     = fuseserver_statfs;
     fuseserver_oper.readdir    = fuseserver_readdir;
     fuseserver_oper.lookup     = fuseserver_lookup;
-    fuseserver_oper.create     = fuseserver_create;
+//    fuseserver_oper.create     = fuseserver_create;
     fuseserver_oper.mknod      = fuseserver_mknod;
     fuseserver_oper.open       = fuseserver_open;
     fuseserver_oper.read       = fuseserver_read;
