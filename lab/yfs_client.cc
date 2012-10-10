@@ -12,12 +12,9 @@
 #include <vector>
 
 
-yfs_client::yfs_client(std::string extent_dst, std::string lock_dst):
-    lastInum(0)
+yfs_client::yfs_client(std::string extent_dst, std::string lock_dst)
 {
     ec = new extent_client(extent_dst);
-    fileSystem ();
-    fileSystem.insert( 0, std::vector() );
 }
 
 yfs_client::inum
@@ -108,8 +105,8 @@ yfs_client::ilookup(inum di, std::string name) {
 
 
 int
-yfs_client::create(inum parent, const char *name, mode_t mode,
-                       fuse_entry_param e, bool isdir) {
+yfs_client::create(inum parent, const char *name, mode_t mode, bool isdir,
+                   int &ninum) {
 
     // generate inum
     // root directory -> 0x000000001
@@ -124,12 +121,7 @@ yfs_client::create(inum parent, const char *name, mode_t mode,
         entryStruct.name = name;
 
         fileSystem[parent].push_back( entryStruct );
-
-        if( isdir ) {
-            std::vector<yfs_client::dirent> files();
-            fileSystem.insert( newEntryInum, files );
-        }
-
+        ninum = newEntryInum;
         return OK;
     }
     else {

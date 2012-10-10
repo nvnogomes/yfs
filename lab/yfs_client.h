@@ -1,6 +1,7 @@
 #ifndef yfs_client_h
 #define yfs_client_h
 
+
 #include <string>
 //#include "yfs_protocol.h"
 #include "extent_client.h"
@@ -10,11 +11,8 @@
 
 class yfs_client {
     extent_client *ec;
-    unsigned int lastInum;
 
 public:   
-    std::map<inum, std::vector<yfs_client::dirent> > fileSystem;
-
     typedef unsigned long long inum;
     enum xxstatus { OK, RPCERR, NOENT, IOERR, FBIG };
     typedef int status;
@@ -35,6 +33,8 @@ public:
         unsigned long long inum;
     };
 
+    std::map<inum, std::vector<yfs_client::dirent> > fileSystem;
+
 private:
     static std::string filename(inum);
     static inum n2i(std::string);
@@ -53,8 +53,8 @@ public:
     int create(inum parent,
                const char *name,
                mode_t mode,
-               fuse_entry_param e,
-               bool isdir);
+               bool isdir,
+               int &ninum);
 
     int remove(inum di);
 };

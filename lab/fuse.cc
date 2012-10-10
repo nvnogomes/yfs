@@ -105,12 +105,12 @@ fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
                 off_t off, struct fuse_file_info *fi)
 {
     // FILLED
-    if( yfs->getfile(ino,fi) == yfs_client::OK ) {
-        fuse_reply_buf(req, buf, size);
-    }
-    else {
-        fuse_reply_err(req, ENOSYS);
-    }
+//    if( yfs->getfile(ino,fi) == yfs_client::OK ) {
+//        fuse_reply_buf(req, buf, size);
+//    }
+//    else {
+//        fuse_reply_err(req, ENOSYS);
+//    }
 
 }
 
@@ -136,8 +136,14 @@ fuseserver_createhelper(fuse_ino_t parent, const char *name,
                         mode_t mode, struct fuse_entry_param *e)
 {
     // FILLED
-    return yfs_client::create(parent, name, mode, &e, false);
+    int ino;
+    yfs_client::status ret = yfs_client::create(parent, name, mode, false, &ino);
 
+    (*e).ino = ino;
+    (*e).attr_timeout = 1800.0;
+    (*e).entry_timeout = 1800.0;
+
+    return ret;
 }
 
 void
@@ -171,7 +177,7 @@ fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
     // Look up the file named `name' in the directory referred to by
     // `parent' in YFS. If the file was found, initialize e.ino and
     // e.attr appropriately.
-    yfs_client::inum i = ilookup( parent, name);
+    yfs_client::inum i = yfs_client::ilookup( parent, name);
 
     if( i > 0 ){
         e.ino = i;
@@ -253,7 +259,7 @@ void
 fuseserver_open(fuse_req_t req, fuse_ino_t ino,
                 struct fuse_file_info *fi)
 {
-    fuseserver_lookup(req, ino,);
+//    fuseserver_lookup(req, ino,);
 
     // FILLED
     if( yfs_client::isdir( ino ) ) {
@@ -275,8 +281,15 @@ fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
                  mode_t mode)
 {
     struct fuse_entry_param e;
+    int ino;
+    yfs_client::status ret = yfs_client::create(parent, name, mode, true, &ino);
 
-    if( yfs_client::create(parent, name, mode, &e, true) == yfs_client::OK ) {
+
+
+    if( ret == yfs_client::OK ) {
+        e.ino = ino;
+        e.attr_timeout = 1800.0;
+        e.entry_timeout = 1800.0;
         fuse_reply_entry(req, &e);
     }
     else {
