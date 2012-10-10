@@ -167,7 +167,7 @@ fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
     struct fuse_entry_param e;
 
-    // You fill this in:
+    // FILLED
     // Look up the file named `name' in the directory referred to by
     // `parent' in YFS. If the file was found, initialize e.ino and
     // e.attr appropriately.
@@ -237,15 +237,12 @@ fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
     memset(&b, 0, sizeof(b));
 
     // fill in the b data structure using dirbuf_add
-
     yfs_client::fileSystem::iterator dirIt;
     for( dirIt = yfs_client::fileSystem[ino].begin() ;
             dirIt != yfs_client::fileSystem[ino].begin() ; dirIt++ ) {
 
         dirbuf_add(&b, dirIt->name.c_str(), dirIt->inum );
     }
-
-
 
     reply_buf_limited(req, b.p, b.size, off, size);
     free(b.p);

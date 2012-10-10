@@ -115,7 +115,7 @@ yfs_client::create(inum parent, const char *name, mode_t mode,
     // root directory -> 0x000000001
 
     inum inumByName = yfs_client::n2i( name );
-    inum newEntryInum =  isdir ? inumByName | 0x01 : inumByName;
+    inum newEntryInum =  isdir ? inumByName | 0x01 : inumByName & 0x10;
 
     if( ec->put(newEntryInum, "") == extent_protocol::OK ) {
 
