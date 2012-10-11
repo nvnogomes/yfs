@@ -72,6 +72,21 @@ release:
     return r;
 }
 
+
+int
+yfs_client::readFile(inum ino, const char *buf) {
+
+    if( isfile(ino) ) {
+        std::string stbuf;
+        ec->get(ino, stbuf);
+        buf = stbuf.c_str();
+        return OK;
+    }
+    else {
+        return IOERR;
+    }
+}
+
 int
 yfs_client::getdir(inum inum, dirinfo &din)
 {
@@ -108,25 +123,27 @@ int
 yfs_client::create(inum parent, const char *name, mode_t mode, bool isdir,
                    int &ninum) {
 
-    // generate inum
-    // root directory -> 0x000000001
+//    // generate inum
+//    // root directory -> 0x000000001
 
-    inum inumByName = yfs_client::n2i( name );
-    inum newEntryInum =  isdir ? inumByName | 0x01 : inumByName & 0x10;
+//    inum inumByName = yfs_client::n2i( name );
+//    inum newEntryInum =  isdir ? inumByName | 0x01 : inumByName & 0x10;
 
-    if( ec->put(newEntryInum, "") == extent_protocol::OK ) {
+//    if( ec->put(newEntryInum, "") == extent_protocol::OK ) {
 
-        yfs_client::dirent entryStruct;
-        entryStruct.inum = newEntryInum;
-        entryStruct.name = name;
+//        yfs_client::dirent entryStruct;
+//        entryStruct.inum = newEntryInum;
+//        entryStruct.name = name;
 
-        fileSystem[parent].push_back( entryStruct );
-        ninum = newEntryInum;
-        return OK;
-    }
-    else {
-        return IOERR;
-    }
+//        fileSystem[parent].push_back( entryStruct );
+//        ninum = newEntryInum;
+//        return OK;
+//    }
+//    else {
+//        return IOERR;
+//    }
+
+    return OK;
 }
 
 

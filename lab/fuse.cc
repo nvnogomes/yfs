@@ -15,6 +15,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
+#include <vector>
+#include <map>
 #include <arpa/inet.h>
 #include "yfs_client.h"
 
@@ -88,7 +90,8 @@ fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr, int to_set
 
         // FILLED
 
-        if( yfs->getfile(ino,fi) == yfs_client::OK ) {
+        yfs_client::fileinfo finfo;
+        if( yfs->getfile(ino, finfo) == yfs_client::OK ) {
             fuse_reply_attr(req, &st, 0);
         }
         else {
@@ -105,12 +108,17 @@ fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
                 off_t off, struct fuse_file_info *fi)
 {
     // FILLED
-//    if( yfs->getfile(ino,fi) == yfs_client::OK ) {
-//        fuse_reply_buf(req, buf, size);
-//    }
-//    else {
-//        fuse_reply_err(req, ENOSYS);
-//    }
+    yfs_client::fileinfo finfo;
+
+    if( yfs->getfile(ino,finfo) == yfs_client::OK ) {
+        char *buf;
+        yfs->readFile(ino, buf);
+
+        fuse_reply_buf(req, buf, size);
+    }
+    else {
+        fuse_reply_err(req, ENOSYS);
+    }
 
 }
 
@@ -120,7 +128,9 @@ fuseserver_write(fuse_req_t req, fuse_ino_t ino,
                  struct fuse_file_info *fi)
 {
     // You fill this in
-    if( yfs->getfile(ino,fi) == yfs_client::OK ) {
+    yfs_client::fileinfo finfo;
+
+    if( yfs->getfile(ino,finfo) == yfs_client::OK ) {
 
         //nrg: call yfs_client::write(ino, buf, off, fi)
 
@@ -137,7 +147,7 @@ fuseserver_createhelper(fuse_ino_t parent, const char *name,
 {
     // FILLED
     int ino;
-    yfs_client::status ret = yfs_client::create(parent, name, mode, false, &ino);
+    yfs_client::status ret = yfs->create(parent, name, mode, false, ino);
 
     (*e).ino = ino;
     (*e).attr_timeout = 1800.0;
@@ -177,13 +187,14 @@ fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
     // Look up the file named `name' in the directory referred to by
     // `parent' in YFS. If the file was found, initialize e.ino and
     // e.attr appropriately.
-    yfs_client::inum i = yfs_client::ilookup( parent, name);
+    yfs_client::fileinfo finfo;
+    yfs_client::inum i = yfs->ilookup( parent, name);
 
     if( i > 0 ){
         e.ino = i;
         e.attr_timeout = 1800.0;
         e.entry_timeout = 1800.0;
-        yfs_client.getfile(i, &e);
+        yfs->getfile(i, finfo);
         fuse_reply_entry(req, &e);
     }
     else {
@@ -243,9 +254,9 @@ fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
     memset(&b, 0, sizeof(b));
 
     // fill in the b data structure using dirbuf_add
-    yfs_client::fileSystem::iterator dirIt;
-    for( dirIt = yfs_client::fileSystem[ino].begin() ;
-            dirIt != yfs_client::fileSystem[ino].begin() ; dirIt++ ) {
+    std::vector<yfs_client::dirent>::iterator dirIt;
+    for( dirIt = yfs->fileSystem[ino].begin() ;
+            dirIt != yfs->fileSystem[ino].begin() ; dirIt++ ) {
 
         dirbuf_add(&b, dirIt->name.c_str(), dirIt->inum );
     }
@@ -260,15 +271,17 @@ fuseserver_open(fuse_req_t req, fuse_ino_t ino,
                 struct fuse_file_info *fi)
 {
 //    fuseserver_lookup(req, ino,);
+    yfs_client::dirinfo dinfo;
+    yfs_client::fileinfo finfo;
 
     // FILLED
-    if( yfs_client::isdir( ino ) ) {
-        yfs_client::getdir( ino, fi );
+    if( yfs->isdir( ino ) ) {
+        yfs->getdir( ino, dinfo );
         fuse_reply_open(req, fi);
         return;
     }
     else {
-        yfs_client::getfile( ino, fi );
+        yfs->getfile( ino, finfo );
         fuse_reply_open(req, fi);
         return;
     }
@@ -282,7 +295,7 @@ fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 {
     struct fuse_entry_param e;
     int ino;
-    yfs_client::status ret = yfs_client::create(parent, name, mode, true, &ino);
+    yfs_client::status ret = yfs->create(parent, name, mode, true, ino);
 
 
 
