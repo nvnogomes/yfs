@@ -74,17 +74,13 @@ release:
 
 
 int
-yfs_client::readFile(inum ino, const char *buf) {
+yfs_client::readFile(inum ino, std::string &buf) {
 
     if( isfile(ino) ) {
-        std::string stbuf;
-        ec->get(ino, stbuf);
-        buf = stbuf.c_str();
+        ec->get(ino, buf);
         return OK;
     }
-    else {
-        return IOERR;
-    }
+    return IOERR;
 }
 
 int
@@ -121,7 +117,7 @@ yfs_client::ilookup(inum di, std::string name) {
 
 int
 yfs_client::create(inum parent, const char *name, mode_t mode, bool isdir,
-                   int &ninum) {
+                   inum &ninum) {
 
     // generate inum
     // root directory -> 0x000000001
@@ -142,8 +138,6 @@ yfs_client::create(inum parent, const char *name, mode_t mode, bool isdir,
     else {
         return IOERR;
     }
-
-    return OK;
 }
 
 

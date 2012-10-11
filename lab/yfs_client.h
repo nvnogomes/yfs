@@ -48,10 +48,10 @@ public:
 
     int getfile(inum, fileinfo &);
     int getdir(inum, dirinfo &);
-    int readFile(inum, const char *buf);
+    int readFile(inum, std::string &buf);
 
 
-    int create(inum parent, const char *name, mode_t mode, bool isdir, int &);
+    int create(inum parent, const char *name, mode_t mode, bool isdir, inum &);
 
     int remove(inum di);
 };
