@@ -14,8 +14,11 @@
 
 
 extent_server::extent_server():
-    fs()
+
 {
+    fs();
+    int i;
+    put(1, "", i);
 }
 
 

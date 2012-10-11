@@ -111,7 +111,7 @@ fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
     yfs_client::fileinfo finfo;
 
     if( yfs->getfile(ino,finfo) == yfs_client::OK ) {
-        char *buf;
+        char* buf;
         yfs->readFile(ino, buf);
 
         fuse_reply_buf(req, buf, size);
@@ -370,7 +370,7 @@ main(int argc, char *argv[])
     fuseserver_oper.statfs     = fuseserver_statfs;
     fuseserver_oper.readdir    = fuseserver_readdir;
     fuseserver_oper.lookup     = fuseserver_lookup;
-//    fuseserver_oper.create     = fuseserver_create;
+    fuseserver_oper.create     = fuseserver_create;
     fuseserver_oper.mknod      = fuseserver_mknod;
     fuseserver_oper.open       = fuseserver_open;
     fuseserver_oper.read       = fuseserver_read;
