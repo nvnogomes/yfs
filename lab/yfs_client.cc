@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <vector>
 
 
 
@@ -51,7 +52,6 @@ int
 yfs_client::getfile(inum inum, fileinfo &fin)
 {
     int r = OK;
-
 
     printf("getfile %016llx\n", inum);
     extent_protocol::attr a;
@@ -104,13 +104,14 @@ release:
 yfs_client::inum
 yfs_client::ilookup(inum di, std::string name) {
 
-    extent_protocol::attr attr;
-    if( ec->getattr( di, attr) == extent_protocol::IOERR ) {
-        return IOERR;
+    std::vector< yfs_client::dirent >::iterator it;
+    for( it = fileSystem[di].begin() ; it != fileSystem[di].end() ; it++ ) {
+        if( it->name == name ) {
+            return it->inum;
+        }
     }
-    else {
-        return di;
-    }
+
+    return -1;
 }
 
 
@@ -122,7 +123,7 @@ yfs_client::create(inum parent, const char *name, mode_t mode, bool isdir,
     // root directory -> 0x000000001
 
     inum inumByName = yfs_client::n2i( name );
-    inum newEntryInum =  isdir ? inumByName | 0x01 : inumByName & 0x10;
+    inum newEntryInum =  isdir ? inumByName | 0x000000001 : inumByName & 0x111111110;
 
     if( ec->put(newEntryInum, "") == extent_protocol::OK ) {
 
