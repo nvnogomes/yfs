@@ -32,10 +32,11 @@ public:
         unsigned long long inum;
     };
 
-     std::map<inum, std::vector<yfs_client::dirent> > fileSystem;
+
 private:
     static std::string filename(inum);
     static inum n2i(std::string);
+     std::map<inum, std::vector<yfs_client::dirent> > fileSystem;
 
 public:
 
@@ -48,7 +49,7 @@ public:
     int getfile(inum, fileinfo &);
     int getdir(inum, dirinfo &);
     int readFile(inum, std::string &buf);
-
+    int readDir(inum ino, std::vector<yfs_client::dirent> &files);
 
     int create(inum parent, const char *name, mode_t mode, bool isdir, inum &ninum);
 

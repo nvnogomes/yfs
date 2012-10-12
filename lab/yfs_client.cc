@@ -83,6 +83,20 @@ yfs_client::readFile(inum ino, std::string &buf) {
 }
 
 int
+yfs_client::readDir(inum ino, std::vector<yfs_client::dirent> &files) {
+
+    std::string buf;
+    if( ec->get(ino, buf) == extent_protocol::OK ) {
+        files = fileSystem[ino];
+        return yfs_client::OK;
+    }
+    else {
+        return yfs_client::IOERR;
+    }
+
+}
+
+int
 yfs_client::getdir(inum inum, dirinfo &din)
 {
     int r = OK;
@@ -115,21 +129,28 @@ yfs_client::ilookup(inum di, std::string name) {
 }
 
 
+
+
 int
 yfs_client::create(inum parent, const char *name, mode_t mode, bool isdir,
                    inum &ninum) {
 
-    // generate inum
-    // root directory -> 0x000000001
+    std::cout << "CREATE " << parent << " " << std::string (name) << std::endl;
 
-    inum inumByName = yfs_client::n2i( name );
-    inum newEntryInum =  isdir ? inumByName | 0x000000001 : inumByName & 0x111111110;
+    std::string nameStr (name);
+    inum inumByName = yfs_client::n2i( nameStr );
+//    inum newEntryInum =  isdir ? inumByName | 0x00000001 : inumByName & 0x11111110;
+    inum newEntryInum =  isdir ? inumByName | 0x80000000 : inumByName & 0x11111110;
 
     if( ec->put(newEntryInum, "") == extent_protocol::OK ) {
 
         yfs_client::dirent entryStruct;
         entryStruct.inum = newEntryInum;
         entryStruct.name = name;
+
+        if( isdir ) {
+            fileSystem[newEntryInum] = std::vector<yfs_client::dirent>();
+        }
 
         fileSystem[parent].push_back( entryStruct );
         ninum = newEntryInum;
