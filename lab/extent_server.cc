@@ -15,7 +15,7 @@
 extent_server::extent_server()
 {
     int i;
-    put(1, "", i);
+    put(0x00000001, "", i);
 }
 
 
@@ -30,7 +30,7 @@ extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
     attr.mtime = current;
     attr.ctime = current;
 
-    fs[ id ] = std::pair<std::string, extent_protocol::attr>(buf, attr);
+    fs[ id ] = std::make_pair(buf, attr);
     return extent_protocol::OK;
 }
 
@@ -41,13 +41,14 @@ extent_server::get(extent_protocol::extentid_t id, std::string &buf)
 {
 
     if( fs.count(id) == 0 ) {
-        return extent_protocol::IOERR;
+        return extent_protocol::NOENT;
     }
     else {
         buf = fs[id].first;
-        fs[id].second.atime = (int) time(NULL);
+        fs[id].second.atime = time(NULL);
+
+        return extent_protocol::OK;
     }
-    return extent_protocol::OK;
 
 }
 
@@ -56,13 +57,21 @@ int
 extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr &a)
 {
     if( fs.count(id) == 0 ) {
-        return extent_protocol::IOERR;
+        a.size = 0;
+        a.ctime = 0;
+        a.mtime = 0;
+        a.atime = 0;
+
+        return extent_protocol::NOENT;
     }
     else {
-        a = fs[id].second;
-    }
+        fs[id].second.atime = time(NULL);
+        extent_protocol::attr currAttr;
+        currAttr = fs[id].second;
+        a = currAttr;
 
-    return extent_protocol::OK;
+        return extent_protocol::OK;
+    }
 }
 
 
@@ -75,7 +84,7 @@ extent_server::remove(extent_protocol::extentid_t id, int &)
             std::pair<std::string, extent_protocol::attr> >::iterator entry = fs.find(id);
 
     if( fs.count(id) == 0 ) {
-        return extent_protocol::IOERR;
+        return extent_protocol::NOENT;
     }
     else {
         fs.erase( entry );

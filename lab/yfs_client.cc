@@ -3,6 +3,7 @@
 #include "extent_client.h"
 #include <sstream>
 #include <iostream>
+#include <cstdlib>
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -73,17 +74,19 @@ release:
 
 
 int
-yfs_client::readFile(inum ino, std::string &buf) {
+yfs_client::readfile(inum ino, std::string &buf) {
 
     if( isfile(ino) ) {
         ec->get(ino, buf);
         return OK;
     }
-    return IOERR;
+    else {
+        return IOERR;
+    }
 }
 
 int
-yfs_client::readDir(inum ino, std::vector<yfs_client::dirent> &files) {
+yfs_client::readdir(inum ino, std::vector<yfs_client::dirent> &files) {
 
     std::string buf;
     if( ec->get(ino, buf) == extent_protocol::OK ) {
@@ -91,7 +94,7 @@ yfs_client::readDir(inum ino, std::vector<yfs_client::dirent> &files) {
         return yfs_client::OK;
     }
     else {
-        return yfs_client::IOERR;
+        return IOERR;
     }
 
 }
@@ -128,32 +131,40 @@ yfs_client::ilookup(inum di, std::string name) {
     return -1;
 }
 
+int
+yfs_client::createfile(inum parent, const char *name, inum &finum) {
+
+    unsigned int newInum = rand() | 0x80000000;
+
+    if( ec->put(newInum, "") == extent_protocol::OK ) {
+
+        yfs_client::dirent entryStruct;
+        entryStruct.inum = newInum;
+        entryStruct.name = name;
+
+        fileSystem[parent].push_back( entryStruct );
+
+        finum = newInum;
+        return OK;
+    }
+    else {
+        return IOERR;
+    }
+}
 
 
 
 int
-yfs_client::create(inum parent, const char *name, mode_t mode, bool isdir,
-                   inum &ninum) {
+yfs_client::createdir(inum parent, const char *name, inum &dinum) {
 
-    std::cout << "CREATE " << parent << " " << std::string (name) << std::endl;
+    unsigned int newInum = rand() & 0x7FFFFFFF;
 
-    std::string nameStr (name);
-    inum inumByName = yfs_client::n2i( nameStr );
-//    inum newEntryInum =  isdir ? inumByName | 0x00000001 : inumByName & 0x11111110;
-    inum newEntryInum =  isdir ? inumByName | 0x80000000 : inumByName & 0x11111110;
+    if( ec->put(newInum, "") == extent_protocol::OK ) {
 
-    if( ec->put(newEntryInum, "") == extent_protocol::OK ) {
-
-        yfs_client::dirent entryStruct;
-        entryStruct.inum = newEntryInum;
-        entryStruct.name = name;
-
-        if( isdir ) {
-            fileSystem[newEntryInum] = std::vector<yfs_client::dirent>();
-        }
-
+        yfs_client::dirent entryStruct = { name , newInum };
         fileSystem[parent].push_back( entryStruct );
-        ninum = newEntryInum;
+        fileSystem[newInum] = std::vector<yfs_client::dirent>();
+        dinum = newInum;
         return OK;
     }
     else {
@@ -163,7 +174,13 @@ yfs_client::create(inum parent, const char *name, mode_t mode, bool isdir,
 
 
 int
-yfs_client::remove(inum di) {
+yfs_client::remove(inum finum) {
 
-    return NOENT;
+    if( ec->remove(finum) == extent_protocol::OK ) {
+        return OK;
+    }
+    else {
+        return IOERR;
+    }
+
 }

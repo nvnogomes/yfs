@@ -42,18 +42,19 @@ public:
 
     yfs_client(std::string, std::string);
 
-    bool isfile(inum);
-    bool isdir(inum);
     inum ilookup(inum di, std::string name);
+    int remove(inum finum);
 
+    int createfile(inum parent, const char *name, inum &finum);
     int getfile(inum, fileinfo &);
+    bool isfile(inum);
+    int readfile(inum, std::string &buf);
+
+    int createdir(inum parent, const char *name, inum &dinum);
     int getdir(inum, dirinfo &);
-    int readFile(inum, std::string &buf);
-    int readDir(inum ino, std::vector<yfs_client::dirent> &files);
+    bool isdir(inum);
+    int readdir(inum ino, std::vector<yfs_client::dirent> &files);
 
-    int create(inum parent, const char *name, mode_t mode, bool isdir, inum &ninum);
-
-    int remove(inum di);
 };
 
 #endif 
