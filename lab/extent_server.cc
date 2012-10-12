@@ -12,7 +12,6 @@
 
 
 
-
 extent_server::extent_server()
 {
     int i;
@@ -78,8 +77,8 @@ extent_server::remove(extent_protocol::extentid_t id, int &)
     }
     else {
         fs.erase( entry );
+        return extent_protocol::OK;
     }
-    return extent_protocol::OK;
 }
 
 

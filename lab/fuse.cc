@@ -259,7 +259,7 @@ fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
     // fill in the b data structure using dirbuf_add
     std::vector<yfs_client::dirent>::iterator dirIt;
     for( dirIt = yfs->fileSystem[ino].begin() ;
-            dirIt != yfs->fileSystem[ino].begin() ; dirIt++ ) {
+            dirIt != yfs->fileSystem[ino].end() ; dirIt++ ) {
 
         dirbuf_add(&b, dirIt->name.c_str(), dirIt->inum );
     }
@@ -273,7 +273,7 @@ void
 fuseserver_open(fuse_req_t req, fuse_ino_t ino,
                 struct fuse_file_info *fi)
 {
-//    fuseserver_lookup(req, ino,);
+//    fuseserver_lookup(req, ino, "");
     yfs_client::dirinfo dinfo;
     yfs_client::fileinfo finfo;
 
