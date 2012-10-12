@@ -6,7 +6,7 @@
  * high-level interface only gives us complete paths.
  */
 
-#include <fuse_lowlevel.h>
+#include <fuse/fuse_lowlevel.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -65,8 +65,7 @@ getattr(yfs_client::inum inum, struct stat &st)
 
 
 void
-fuseserver_getattr(fuse_req_t req, fuse_ino_t ino,
-                   struct fuse_file_info *fi)
+fuseserver_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
     struct stat st;
     yfs_client::inum inum = ino; // req->in.h.nodeid;
@@ -85,7 +84,7 @@ fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr, int to_set
 {
     printf("fuseserver_setattr 0x%x\n", to_set);
     if (FUSE_SET_ATTR_SIZE & to_set) {
-        printf("   fuseserver_setattr set size to %zu\n", attr->st_size);
+//        printf("   fuseserver_setattr set size to %zu\n", attr->st_size);
         struct stat st;
 
         // FILLED

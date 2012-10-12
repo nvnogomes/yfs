@@ -1,7 +1,6 @@
 #ifndef yfs_client_h
 #define yfs_client_h
 
-
 #include <string>
 //#include "yfs_protocol.h"
 #include "extent_client.h"
@@ -51,7 +50,7 @@ public:
     int readFile(inum, std::string &buf);
 
 
-    int create(inum parent, const char *name, mode_t mode, bool isdir, inum &);
+    int create(inum parent, const char *name, mode_t mode, bool isdir, inum &ninum);
 
     int remove(inum di);
 };

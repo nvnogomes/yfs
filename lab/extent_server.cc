@@ -13,10 +13,8 @@
 
 
 
-extent_server::extent_server():
-
+extent_server::extent_server()
 {
-    fs();
     int i;
     put(1, "", i);
 }

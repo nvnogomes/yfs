@@ -8,8 +8,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <map>
-#include <vector>
+
 
 
 yfs_client::yfs_client(std::string extent_dst, std::string lock_dst)
