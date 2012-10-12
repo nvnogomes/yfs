@@ -104,8 +104,9 @@ release:
 
 yfs_client::inum
 yfs_client::ilookup(inum di, std::string name) {
-    std::string buf;
-    if( ec->get(di, buf) == extent_protocol::IOERR ) {
+
+    extent_protocol::attr attr;
+    if( ec->getattr( di, attr) == extent_protocol::IOERR ) {
         return IOERR;
     }
     else {
