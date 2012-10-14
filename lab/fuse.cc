@@ -263,6 +263,7 @@ fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
     // fill in the b data structure using dirbuf_add
     std::vector<yfs_client::dirent> entries;
     if( yfs->readdir(ino, entries) == yfs_client::OK ) {
+
         std::vector<yfs_client::dirent>::iterator cDir;
         for( cDir = entries.begin() ; cDir != entries.end() ; cDir++ ) {
             dirbuf_add(&b, cDir->name.c_str(), cDir->inum );

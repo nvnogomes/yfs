@@ -12,6 +12,42 @@
 #include <vector>
 
 
+std::vector<yfs_client::dirent>
+yfs_client::deserialize( std::string s ) {
+
+    std::string name;
+    yfs_client::inum i;
+    std::vector<yfs_client::dirent> dsv;
+    std::istringstream sstream (s);
+    for(;;) {
+        sstream >> name >> i;
+        yfs_client::dirent d = {name, i};
+        if( sstream.eof() ) {
+            break;
+        }
+        dsv.push_back( d );
+    }
+    return dsv;
+}
+
+int
+yfs_client::findInum(std::string bf, std::string lname) {
+
+    std::string name;
+    yfs_client::inum i;
+    std::stringstream sstream (bf);
+    for(;;) {
+        sstream >> name >> i;
+        if( sstream.eof() ) {
+            return -1;
+        }
+        if( name == lname ) {
+            return i;
+        }
+    }
+}
+
+
 
 yfs_client::yfs_client(std::string extent_dst, std::string lock_dst)
 {
@@ -86,11 +122,11 @@ yfs_client::readfile(inum ino, std::string &buf) {
 }
 
 int
-yfs_client::readdir(inum ino, std::vector<yfs_client::dirent> &files) {
+yfs_client::readdir(inum ino, std::vector<dirent> &files) {
 
     std::string buf;
     if( ec->get(ino, buf) == extent_protocol::OK ) {
-        files = fileSystem[ino];
+        files = deserialize( buf );
         return yfs_client::OK;
     }
     else {
@@ -121,55 +157,49 @@ release:
 yfs_client::inum
 yfs_client::ilookup(inum di, std::string name) {
 
-    std::vector< yfs_client::dirent >::iterator it;
-    for( it = fileSystem[di].begin() ; it != fileSystem[di].end() ; it++ ) {
-        if( it->name == name ) {
-            return it->inum;
+    std::string buf;
+    yfs_client::inum i = -1;
+    if( ec->get(di, buf) == extent_protocol::OK ) {
+        i = findInum(buf, name);
+    }
+    return i;
+}
+
+
+
+int
+yfs_client::create(yfs_client::inum parent, const char *name, yfs_client::inum ninum) {
+
+    std::string buf;
+    if( ec->get(parent, buf) == extent_protocol::OK ) {
+
+        std::stringstream sstream (buf);
+        sstream << name << " " << ninum << std::endl;
+
+        if( ec->put(parent, sstream.str()) == extent_protocol::OK
+                && ec->put(ninum, "")  == extent_protocol::OK ) {
+            return yfs_client::OK;
         }
     }
-
-    return -1;
+    return yfs_client::IOERR;
 }
+
 
 int
 yfs_client::createfile(inum parent, const char *name, inum &finum) {
 
-    unsigned int newInum = rand() | 0x80000000;
+    finum = rand() | 0x80000000;
 
-    if( ec->put(newInum, "") == extent_protocol::OK ) {
-
-        yfs_client::dirent entryStruct;
-        entryStruct.inum = newInum;
-        entryStruct.name = name;
-
-        fileSystem[parent].push_back( entryStruct );
-
-        finum = newInum;
-        return OK;
-    }
-    else {
-        return IOERR;
-    }
+    return create(parent, name, finum);
 }
-
 
 
 int
 yfs_client::createdir(inum parent, const char *name, inum &dinum) {
 
-    unsigned int newInum = rand() & 0x7FFFFFFF;
+    dinum = rand() & 0x7FFFFFFF;
 
-    if( ec->put(newInum, "") == extent_protocol::OK ) {
-
-        yfs_client::dirent entryStruct = { name , newInum };
-        fileSystem[parent].push_back( entryStruct );
-        fileSystem[newInum] = std::vector<yfs_client::dirent>();
-        dinum = newInum;
-        return OK;
-    }
-    else {
-        return IOERR;
-    }
+    return create(parent, name, dinum);
 }
 
 
@@ -184,3 +214,4 @@ yfs_client::remove(inum finum) {
     }
 
 }
+

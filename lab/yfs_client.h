@@ -36,7 +36,9 @@ public:
 private:
     static std::string filename(inum);
     static inum n2i(std::string);
-     std::map<inum, std::vector<yfs_client::dirent> > fileSystem;
+    int create(yfs_client::inum parent, const char *name, yfs_client::inum ninum);
+    int findInum(std::string bf, std::string lname);
+    std::vector<yfs_client::dirent> deserialize( std::string s );
 
 public:
 
