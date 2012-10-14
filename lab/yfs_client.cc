@@ -47,6 +47,25 @@ yfs_client::findInum(std::string bf, std::string lname) {
     }
 }
 
+std::string
+yfs_client::removeDirectoryFile(std::string bf, std::string lname) {
+
+    std::string name;
+    std::stringstream output ("");
+    yfs_client::inum i;
+    std::istringstream sstream (bf);
+    for(;;) {
+        sstream >> name >> i;
+
+        if( sstream.eof() )  break;
+        if( lname == name) continue;
+
+        output << name << i << std::endl;
+    }
+
+    return output.str();
+}
+
 
 
 yfs_client::yfs_client(std::string extent_dst, std::string lock_dst)
@@ -204,14 +223,26 @@ yfs_client::createdir(inum parent, const char *name, inum &dinum) {
 
 
 int
-yfs_client::remove(inum finum) {
+yfs_client::remove(inum parent, std::string name) {
 
-    if( ec->remove(finum) == extent_protocol::OK ) {
-        return OK;
-    }
-    else {
-        return IOERR;
-    }
+    std::string buf, result;
+    inum foundInum = ilookup(parent, name);
 
+    if( foundInum > 0 ) {
+        // remove entry
+        if( ec->remove( foundInum ) == extent_protocol::OK ) {
+
+            // remove entry in the parent directory
+            if( ec->get(parent, buf)  == extent_protocol::OK ) {
+                result = removeDirectoryFile(buf, name);
+
+                // update directory contents
+                if( ec->put(parent, result) == extent_protocol::OK ) {
+                    return OK;
+                }
+            }
+        }
+    }
+    return IOERR;
 }
 

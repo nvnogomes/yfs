@@ -39,13 +39,14 @@ private:
     int create(yfs_client::inum parent, const char *name, yfs_client::inum ninum);
     int findInum(std::string bf, std::string lname);
     std::vector<yfs_client::dirent> deserialize( std::string s );
+    std::string removeDirectoryFile(std::string bf, std::string lname);
 
 public:
 
     yfs_client(std::string, std::string);
 
     inum ilookup(inum di, std::string name);
-    int remove(inum finum);
+    int remove(inum parent, std::string name);
 
     int createfile(inum parent, const char *name, inum &finum);
     int getfile(inum, fileinfo &);

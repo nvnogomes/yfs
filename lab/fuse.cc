@@ -321,13 +321,11 @@ void
 fuseserver_unlink(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
 
-    // You fill this in
+    // FILLED
     // Success:	fuse_reply_err(req, 0);
     // Not found:	fuse_reply_err(req, ENOENT);
 
-    yfs_client::inum nodeInum = yfs->ilookup(parent, name);
-    if( nodeInum > 0 ) {
-        yfs->remove( nodeInum );
+    if( yfs->remove( parent, name ) == yfs_client::OK ) {
         fuse_reply_err(req, 0);
     }
     else {

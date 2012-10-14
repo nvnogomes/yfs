@@ -79,7 +79,6 @@ extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr &a)
 int
 extent_server::remove(extent_protocol::extentid_t id, int &)
 {
-    //TODO erase from parent of id
     std::map<extent_protocol::extentid_t,
             std::pair<std::string, extent_protocol::attr> >::iterator entry = fs.find(id);
 
