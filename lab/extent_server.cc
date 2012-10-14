@@ -12,16 +12,20 @@
 
 
 
-extent_server::extent_server()
+extent_server::extent_server():
+    stats()
 {
     int i;
-    put(0x00000001, "", i);
+    put(1, "", i);
 }
 
 
 int
 extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
 {
+
+    stats.putInc();
+    std::cout << "PUT  id=" << id << "; str=["<< buf << "]"<< std::endl;
 
     extent_protocol::attr attr;
     int current = (int) time(NULL);
@@ -39,12 +43,15 @@ extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
 int
 extent_server::get(extent_protocol::extentid_t id, std::string &buf)
 {
+    stats.getInc();
+//    std::cout << "GET  id=" << id << "; str=["<< buf << "]"<< std::endl;
 
     if( fs.count(id) == 0 ) {
         return extent_protocol::NOENT;
     }
     else {
         buf = fs[id].first;
+
         fs[id].second.atime = time(NULL);
 
         return extent_protocol::OK;
@@ -56,12 +63,14 @@ extent_server::get(extent_protocol::extentid_t id, std::string &buf)
 int
 extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr &a)
 {
-    if( fs.count(id) == 0 ) {
-        a.size = 0;
-        a.ctime = 0;
-        a.mtime = 0;
-        a.atime = 0;
+    stats.getattrInc();
+//    std::cout << "GETATTR  id=" << id <<
+//            "; attr=["<< a.atime <<";"<<
+//            a.ctime <<";"<<
+//            a.mtime <<";"<<
+//            a.size<< "]"<< std::endl;
 
+    if( fs.count(id) == 0 ) {
         return extent_protocol::NOENT;
     }
     else {
@@ -79,6 +88,8 @@ extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr &a)
 int
 extent_server::remove(extent_protocol::extentid_t id, int &)
 {
+    stats.removeInc();
+
     std::map<extent_protocol::extentid_t,
             std::pair<std::string, extent_protocol::attr> >::iterator entry = fs.find(id);
 

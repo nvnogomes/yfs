@@ -13,6 +13,32 @@ private:
     std::map<extent_protocol::extentid_t,
             std::pair<std::string, extent_protocol::attr> > fs;
 
+    struct debug {
+        unsigned int nput;
+        unsigned int nget;
+        unsigned int ngetattr;
+        unsigned int nremove;
+
+        debug():
+            nput(), nget(), ngetattr(), nremove()
+        {}
+
+        void putInc() {
+            nput++;
+        }
+        void getInc() {
+            nget++;
+        }
+        void getattrInc() {
+            ngetattr++;
+        }
+        void removeInc() {
+            nremove++;
+        }
+    };
+
+    debug stats;
+
  public:
   extent_server();
 

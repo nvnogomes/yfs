@@ -39,7 +39,7 @@ yfs_client::findInum(std::string bf, std::string lname) {
     for(;;) {
         sstream >> name >> i;
         if( sstream.eof() ) {
-            return -1;
+            return 0;
         }
         if( name == lname ) {
             return i;
@@ -189,13 +189,16 @@ yfs_client::ilookup(inum di, std::string name) {
 int
 yfs_client::create(yfs_client::inum parent, const char *name, yfs_client::inum ninum) {
 
+
     std::string buf;
     if( ec->get(parent, buf) == extent_protocol::OK ) {
 
-        std::stringstream sstream (buf);
+        std::stringstream sstream;
         sstream << name << " " << ninum << std::endl;
 
-        if( ec->put(parent, sstream.str()) == extent_protocol::OK
+        buf += sstream.str();
+
+        if( ec->put(parent, buf) == extent_protocol::OK
                 && ec->put(ninum, "")  == extent_protocol::OK ) {
             return yfs_client::OK;
         }
@@ -206,6 +209,8 @@ yfs_client::create(yfs_client::inum parent, const char *name, yfs_client::inum n
 
 int
 yfs_client::createfile(inum parent, const char *name, inum &finum) {
+
+    std::cout << "CREATE yfs_client" << std::endl;
 
     finum = rand() | 0x80000000;
 

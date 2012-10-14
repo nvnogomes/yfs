@@ -141,6 +141,7 @@ fuseserver_createhelper(fuse_ino_t parent, const char *name,
                         mode_t mode, struct fuse_entry_param *e)
 {
     // FILLED
+    std::cout << " CREATE " << parent << " " << name << std::endl;
     yfs_client::inum finum;
     if( yfs->createfile(parent, name, finum) == yfs_client::OK ) {
 
@@ -149,9 +150,11 @@ fuseserver_createhelper(fuse_ino_t parent, const char *name,
         e->entry_timeout = 10.0;
         getattr(e->ino, e->attr);
 
+        std::cout << "OK" << std::endl;
         return yfs_client::OK;
     }
     else {
+        std::cout << "ERROR" << std::endl;
         return yfs_client::IOERR;
     }
 
@@ -195,8 +198,8 @@ fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
     if( ino > 0 ){
 
         e.ino = ino;
-        e.attr_timeout = 10.0;
-        e.entry_timeout = 10.0;
+        e.attr_timeout = 0.0;
+        e.entry_timeout = 0.0;
         getattr(e.ino, e.attr);
 
         fuse_reply_entry(req, &e);
@@ -247,7 +250,6 @@ fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 {
     yfs_client::inum inum = ino; // req->in.h.nodeid;
     struct dirbuf b;
-    yfs_client::dirent e;
 
     printf("fuseserver_readdir\n");
 
@@ -264,9 +266,12 @@ fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
     std::vector<yfs_client::dirent> entries;
     if( yfs->readdir(ino, entries) == yfs_client::OK ) {
 
+        std::cout << "READ DIR " << ino << std::endl;
+
         std::vector<yfs_client::dirent>::iterator cDir;
         for( cDir = entries.begin() ; cDir != entries.end() ; cDir++ ) {
             dirbuf_add(&b, cDir->name.c_str(), cDir->inum );
+            std::cout << cDir->name.c_str() << cDir->inum << std::endl;
         }
 
         reply_buf_limited(req, b.p, b.size, off, size);
@@ -283,16 +288,15 @@ fuseserver_open(fuse_req_t req, fuse_ino_t ino,
                 struct fuse_file_info *fi)
 {
 
-    yfs_client::fileinfo finfo;
-    fi->fh = ino;
+//    yfs_client::fileinfo finfo;
 
     // FILLED
-    if( yfs->getfile( ino, finfo ) == yfs_client::OK ){
+//if( yfs->getfile( ino, finfo ) == yfs_client::OK ){
         fuse_reply_open(req, fi);
-    }
-    else {
+//    }
+//    else {
         fuse_reply_err(req, ENOSYS);
-    }
+//}
 
 }
 
