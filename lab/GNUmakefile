@@ -29,8 +29,8 @@ endif
 endif
 LDLIBS += $(shell test -f `gcc -print-file-name=librt.so` && echo -lrt)
 LDLIBS += $(shell test -f `gcc -print-file-name=libdl.so` && echo -ldl)
-CC = g++
-CXX = g++
+CC = g++-4.6
+CXX = g++-4.6
 
 lab:  lab2
 lab1: rpc/rpctest lock_server lock_tester lock_demo
