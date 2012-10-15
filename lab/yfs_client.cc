@@ -131,10 +131,13 @@ release:
 
 
 int
-yfs_client::readfile(inum ino, std::string &buf) {
+yfs_client::readfile(inum ino, off_t off, size_t size, std::string &buf) {
 
+    std::string fileContents;
     if( isfile(ino) ) {
-        ec->get(ino, buf);
+        ec->get(ino, fileContents);
+
+        buf = fileContents.substr(off, size);
         return OK;
     }
     else {
@@ -253,3 +256,34 @@ yfs_client::remove(inum parent, std::string name) {
     return IOERR;
 }
 
+
+int
+yfs_client::writefile(inum ino, std::string buf, off_t off, size_t &size) {
+
+    if( isdir(ino) ) {
+        return IOERR;
+    }
+
+    std::string fileContents;
+    if( ec->get(ino, fileContents) == extent_protocol::OK ) {
+        std::string toAppend = std::string(buf, size);
+        fileContents.replace(off, buf.size(), buf);
+        size = buf.size();
+        if( ec->put(ino, fileContents) == extent_protocol::OK ) {
+            return OK;
+        }
+    }
+    return IOERR;
+
+}
+
+int
+yfs_client::setattr(inum ino, struct stat *attr, int to_set) {
+
+    extent_protocol::attr nodeAttr;
+    if( ec->getattr(ino, nodeAttr) == extent_protocol::OK ) {
+
+        return OK;
+    }
+    return IOERR;
+}

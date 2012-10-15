@@ -88,9 +88,8 @@ fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr, int to_set
         struct stat st;
 
         // FILLED
-        if( getattr(ino, st) == yfs_client::OK ) {
-            st = (*attr);
-
+        if( yfs->setattr(ino, attr, to_set) == yfs_client::OK ) {
+            getattr(ino, st);
             fuse_reply_attr(req, &st, 0);
         }
     }
@@ -107,10 +106,10 @@ fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
 
     if( yfs->getfile(ino,finfo) == yfs_client::OK ) {
         std::string buf;
-        yfs->readfile(ino, buf);
+        yfs->readfile(ino, off, size, buf);
         fi->fh = ino;
 
-        fuse_reply_buf(req, buf.c_str(), size);
+        fuse_reply_buf(req, buf.c_str(), buf.size());
     }
     else {
         fuse_reply_err(req, ENOSYS);
@@ -123,14 +122,14 @@ fuseserver_write(fuse_req_t req, fuse_ino_t ino,
                  const char *buf, size_t size, off_t off,
                  struct fuse_file_info *fi)
 {
-    // You fill this in
+    // FILLED
     yfs_client::fileinfo finfo;
-
     if( yfs->getfile(ino,finfo) == yfs_client::OK ) {
 
-        //nrg: call yfs_client::writefile(ino, buf, off, fi)
-
-        fuse_reply_write(req, size/*bytes_written*/);
+        fi->fh = ino;
+        if( yfs->writefile(ino, buf, off, size) == yfs_client::OK ) {
+            fuse_reply_write(req, size/*bytes_written*/);
+        }
     }
     else {
         fuse_reply_err(req, ENOSYS);
@@ -142,7 +141,6 @@ fuseserver_createhelper(fuse_ino_t parent, const char *name,
                         mode_t mode, struct fuse_entry_param *e)
 {
     // FILLED
-    std::cout << " CREATE " << parent << " " << name << std::endl;
     yfs_client::inum finum;
     if( yfs->createfile(parent, name, finum) == yfs_client::OK ) {
 

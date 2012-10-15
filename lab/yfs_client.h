@@ -36,9 +36,9 @@ public:
 private:
     static std::string filename(inum);
     static inum n2i(std::string);
-    int create(yfs_client::inum parent, const char *name, yfs_client::inum ninum);
+    int create(inum parent, const char *name, inum ninum);
     int findInum(std::string bf, std::string lname);
-    std::vector<yfs_client::dirent> deserialize( std::string s );
+    std::vector<dirent> deserialize( std::string s );
     std::string removeDirectoryFile(std::string bf, std::string lname);
 
 public:
@@ -47,16 +47,18 @@ public:
 
     inum ilookup(inum di, std::string name);
     int remove(inum parent, std::string name);
+    int setattr(inum ino, struct stat *attr, int to_set);
 
     int createfile(inum parent, const char *name, inum &finum);
     int getfile(inum, fileinfo &);
     bool isfile(inum);
-    int readfile(inum, std::string &buf);
+    int readfile(inum, off_t off, size_t size, std::string &buf);
+    int writefile(inum ino, std::string buf, off_t off, size_t &size);
 
     int createdir(inum parent, const char *name, inum &dinum);
     int getdir(inum, dirinfo &);
     bool isdir(inum);
-    int readdir(inum ino, std::vector<yfs_client::dirent> &files);
+    int readdir(inum ino, std::vector<dirent> &files);
 
 };
 
