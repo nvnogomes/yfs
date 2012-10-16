@@ -105,6 +105,7 @@ fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
     yfs_client::fileinfo finfo;
 
     if( yfs->getfile(ino,finfo) == yfs_client::OK ) {
+
         std::string buf;
         yfs->readfile(ino, off, size, buf);
         fi->fh = ino;
@@ -123,12 +124,18 @@ fuseserver_write(fuse_req_t req, fuse_ino_t ino,
                  struct fuse_file_info *fi)
 {
     // FILLED
+    /* NvGomes:
+     * write to file -ino- the substring -buf- of the given size -size-
+     * beggining with the offset -off-
+     */
     yfs_client::fileinfo finfo;
     if( yfs->getfile(ino,finfo) == yfs_client::OK ) {
 
         fi->fh = ino;
-        if( yfs->writefile(ino, buf, off, size) == yfs_client::OK ) {
-            fuse_reply_write(req, size/*bytes_written*/);
+        std::string toAppend(buf,size);
+        size_t writtenBytes;
+        if( yfs->writefile(ino, toAppend, off, writtenBytes) == yfs_client::OK ) {
+            fuse_reply_write(req, writtenBytes/*bytes_written*/);
         }
     }
     else {
@@ -261,8 +268,6 @@ fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
     std::vector<yfs_client::dirent> entries;
     if( yfs->readdir(ino, entries) == yfs_client::OK ) {
 
-        std::cout << "READ DIR " << ino << std::endl;
-
         std::vector<yfs_client::dirent>::iterator cDir;
         for( cDir = entries.begin() ; cDir != entries.end() ; cDir++ ) {
             dirbuf_add(&b, cDir->name.c_str(), cDir->inum );
@@ -283,15 +288,15 @@ fuseserver_open(fuse_req_t req, fuse_ino_t ino,
                 struct fuse_file_info *fi)
 {
 
-//    yfs_client::fileinfo finfo;
+    yfs_client::fileinfo finfo;
 
     // FILLED
-//if( yfs->getfile( ino, finfo ) == yfs_client::OK ){
+    if( yfs->getfile( ino, finfo ) == yfs_client::OK ){
         fuse_reply_open(req, fi);
-//    }
-//    else {
+    }
+    else {
         fuse_reply_err(req, ENOSYS);
-//}
+    }
 
 }
 
