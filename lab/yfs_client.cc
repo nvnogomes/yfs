@@ -152,7 +152,7 @@ yfs_client::inum
 yfs_client::ilookup(inum di, std::string name) {
 
     std::string buf;
-    yfs_client::inum i = -1;
+    yfs_client::inum i = 0;
     if( ec->get(di, buf) == extent_protocol::OK ) {
         i = findInum(buf, name);
     }
@@ -220,20 +220,16 @@ int
 yfs_client::remove(inum parent, std::string name) {
 
     std::string buf, result;
-    inum foundInum = ilookup(parent, name);
+    inum i;
 
-    if( foundInum > 0 ) {
-        // remove entry
-        if( ec->remove( foundInum ) == extent_protocol::OK ) {
+    if( ec->get(parent, buf) == extent_protocol::OK ) {
 
-            // remove entry in the parent directory
-            if( ec->get(parent, buf)  == extent_protocol::OK ) {
-                result = removeDirectoryFile(buf, name);
+        result = removeDirectoryFile(buf, name, i);
 
-                // update directory contents
-                if( ec->put(parent, result) == extent_protocol::OK ) {
-                    return OK;
-                }
+        if( ec->put(parent, result) == extent_protocol::OK ) {
+
+            if( ec->remove( i ) == extent_protocol::OK ) {
+                return OK;
             }
         }
     }
@@ -242,22 +238,24 @@ yfs_client::remove(inum parent, std::string name) {
 
 
 std::string
-yfs_client::removeDirectoryFile(std::string bf, std::string lname) {
+yfs_client::removeDirectoryFile(std::string bf, std::string nodeName, inum &ri) {
 
-    std::string name;
-    std::stringstream output ("");
-    yfs_client::inum i;
-    std::istringstream sstream (bf);
-    for(;;) {
-        sstream >> name >> i;
+    // TODO: OPTIMIZE!!
 
-        if( sstream.eof() ) break;
-        if( lname == name) continue;
+    inum iRem;
+    std::vector<dirent> vec = deserialize( bf );
+    std::vector<yfs_client::dirent>::iterator it;
+    std::ostringstream buf("");
+    for( it = vec.begin() ; it != vec.end() ; it++ ) {
 
-        output << name << i << std::endl;
+        if( it->name == nodeName ) {
+            iRem = it->inum;
+            continue;
+        }
+        buf << it->name << " " << it->inum << std::endl;
     }
-
-    return output.str();
+    ri = iRem;
+    return buf.str();
 }
 
 

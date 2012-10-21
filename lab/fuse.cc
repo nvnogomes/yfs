@@ -305,14 +305,13 @@ fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t mod
 {
     struct fuse_entry_param e;
     yfs_client::inum ino;
-    yfs_client::status ret = yfs->createdir(parent, name, ino);
 
-    if( ret == yfs_client::OK ) {
+    if( yfs->createdir(parent, name, ino) == yfs_client::OK ) {
         e.ino = ino;
-        e.attr_timeout = 900.0;
-        e.entry_timeout = 900.0;
+        e.attr_timeout = 10.0;
+        e.entry_timeout = 10.0;
+        getattr(e.ino, e.attr);
         fuse_reply_entry(req, &e);
-        return;
     }
     else {
         fuse_reply_err(req, ENOSYS);

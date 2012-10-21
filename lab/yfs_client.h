@@ -34,12 +34,12 @@ public:
 
 
 private:
-    static std::string filename(inum);
-    static inum n2i(std::string);
     int create(inum parent, const char *name, inum ninum);
-    int findInum(std::string bf, std::string lname);
     std::vector<dirent> deserialize( std::string s );
-    std::string removeDirectoryFile(std::string bf, std::string lname);
+    static std::string filename(inum);
+    int findInum(std::string bf, std::string lname);
+    static inum n2i(std::string);
+    std::string removeDirectoryFile(std::string bf, std::string nodeName, inum &ri);
 
 public:
 
