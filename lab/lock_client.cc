@@ -38,14 +38,19 @@ int
 lock_client::acquire(lock_protocol::lockid_t lid)
 {
 	int r;
-	return cl->call(lock_protocol::acquire, cl->id(), lid, r);
 
+    std::cout << "ACQUIRE " << lid << std::endl;
+
+	return cl->call(lock_protocol::acquire, cl->id(), lid, r);
 }
 
 int
 lock_client::release(lock_protocol::lockid_t lid)
 {
 	int r;
+
+    std::cout << "RELEASE " << lid << std::endl;
+
 	return cl->call(lock_protocol::release, cl->id(), lid, r);
 }
 

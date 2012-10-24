@@ -13,40 +13,16 @@ private:
     std::map<extent_protocol::extentid_t,
             std::pair<std::string, extent_protocol::attr> > fs;
 
-    struct debug {
-        unsigned int nput;
-        unsigned int nget;
-        unsigned int ngetattr;
-        unsigned int nremove;
+    int printMap();
 
-        debug():
-            nput(), nget(), ngetattr(), nremove()
-        {}
+public:
+    extent_server();
 
-        void putInc() {
-            nput++;
-        }
-        void getInc() {
-            nget++;
-        }
-        void getattrInc() {
-            ngetattr++;
-        }
-        void removeInc() {
-            nremove++;
-        }
-    };
-
-    debug stats;
-
- public:
-  extent_server();
-
-  int put(extent_protocol::extentid_t id, std::string, int &);
-  int get(extent_protocol::extentid_t id, std::string &);
-  int getattr(extent_protocol::extentid_t id, extent_protocol::attr &);
-  int setattr(extent_protocol::extentid_t id, extent_protocol::attr);
-  int remove(extent_protocol::extentid_t id, int &);
+    int put(extent_protocol::extentid_t id, std::string, int &);
+    int get(extent_protocol::extentid_t id, std::string &);
+    int getattr(extent_protocol::extentid_t id, extent_protocol::attr &);
+    int remove(extent_protocol::extentid_t id, int &);
+    int setattr(extent_protocol::extentid_t id, extent_protocol::attr a, int&);
 };
 
 #endif

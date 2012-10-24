@@ -84,7 +84,7 @@ fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr, int to_set
 {
     printf("fuseserver_setattr 0x%x\n", to_set);
     if (FUSE_SET_ATTR_SIZE & to_set) {
-//        printf("   fuseserver_setattr set size to %zu\n", attr->st_size);
+        printf("   fuseserver_setattr set size to %i\n", (int)attr->st_size);
         struct stat st;
 
         // FILLED
@@ -156,11 +156,9 @@ fuseserver_createhelper(fuse_ino_t parent, const char *name,
         e->entry_timeout = 10.0;
         getattr(e->ino, e->attr);
 
-        std::cout << "OK" << std::endl;
         return yfs_client::OK;
     }
     else {
-        std::cout << "ERROR" << std::endl;
         return yfs_client::IOERR;
     }
 }

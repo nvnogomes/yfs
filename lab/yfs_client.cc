@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <vector>
+#include <time.h>
 
 
 
@@ -303,18 +304,30 @@ yfs_client::setattr(inum ino, struct stat *attr, int to_set) {
     extent_protocol::attr nodeAttr;
     int returnValue = IOERR;
 
+    std::cout << "SETATTR " << ino << " ts: " << to_set << std::endl;
+    std::cout << attr->st_atim.tv_nsec << " " << nodeAttr.atime
+              << std::endl
+              << attr->st_ctim.tv_nsec << " " << nodeAttr.atime
+              << std::endl
+              << attr->st_mtim.tv_nsec << " " << nodeAttr.atime
+              << std::endl
+              << attr->st_size  << " " << nodeAttr.size
+              << std::endl;
+
+
+
     lc->acquire( ino );
 
     if( ec->getattr(ino, nodeAttr) == extent_protocol::OK ) {
 
-        std::string fileContent;
-        if( ec->get(ino, fileContent) == extent_protocol::OK ) {
+        extent_protocol::attr newAttr;
+        newAttr.atime  = attr->st_atim.tv_nsec;
+        newAttr.ctime  = attr->st_ctim.tv_nsec;
+        newAttr.mtime  = attr->st_mtim.tv_nsec;
+        newAttr.size   = attr->st_size;
 
-            if( attr->st_size < fileContent.size() ) {
-                ec->put(ino, fileContent.substr(0, attr->st_size) );
-                returnValue = OK;
-            }
-//            return OK;
+        if( ec->setattr(ino, newAttr) ) {
+            returnValue = OK;
         }
     }
 
