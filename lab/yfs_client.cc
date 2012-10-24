@@ -1,6 +1,7 @@
 // yfs client.  implements FS operations using extent and lock server
 #include "yfs_client.h"
 #include "extent_client.h"
+#include "lock_client.h"
 #include <sstream>
 #include <iostream>
 #include <cstdlib>
@@ -16,14 +17,18 @@
 yfs_client::yfs_client(std::string extent_dst, std::string lock_dst) {
 
     ec = new extent_client(extent_dst);
+    lc = new lock_client(lock_dst);
 }
 
 
 int
 yfs_client::create(yfs_client::inum parent, const char *name, yfs_client::inum ninum) {
 
-
     std::string buf;
+    int returnValue = IOERR;
+
+    lc->acquire( parent );
+
     if( ec->get(parent, buf) == extent_protocol::OK ) {
 
         std::stringstream sstream;
@@ -33,10 +38,13 @@ yfs_client::create(yfs_client::inum parent, const char *name, yfs_client::inum n
 
         if( ec->put(parent, buf) == extent_protocol::OK
                 && ec->put(ninum, "")  == extent_protocol::OK ) {
-            return yfs_client::OK;
+            returnValue = OK;
         }
     }
-    return yfs_client::IOERR;
+
+    lc->release( parent );
+
+    return returnValue;
 }
 
 
@@ -107,44 +115,50 @@ yfs_client::findInum(std::string bf, std::string lname) {
 int
 yfs_client::getdir(inum inum, dirinfo &din) {
 
-    int r = OK;
+    int returnValue = IOERR;
+    extent_protocol::attr a;
 
     printf("getdir %016llx\n", inum);
-    extent_protocol::attr a;
-    if (ec->getattr(inum, a) != extent_protocol::OK) {
-        r = IOERR;
-        goto release;
-    }
-    din.atime = a.atime;
-    din.mtime = a.mtime;
-    din.ctime = a.ctime;
 
-release:
-    return r;
+    lc->acquire( inum );
+
+    if (ec->getattr(inum, a) == extent_protocol::OK) {
+        din.atime = a.atime;
+        din.mtime = a.mtime;
+        din.ctime = a.ctime;
+
+        returnValue = OK;
+    }
+
+    lc->release( inum );
+
+    return returnValue;
 }
 
 
 int
 yfs_client::getfile(inum inum, fileinfo &fin) {
 
-    int r = OK;
+    int returnValue = IOERR;
+    extent_protocol::attr a;
 
     printf("getfile %016llx\n", inum);
-    extent_protocol::attr a;
-    if (ec->getattr(inum, a) != extent_protocol::OK) {
-        r = IOERR;
-        goto release;
+
+    lc->acquire( inum );
+
+    if (ec->getattr(inum, a) == extent_protocol::OK) {
+        fin.atime = a.atime;
+        fin.mtime = a.mtime;
+        fin.ctime = a.ctime;
+        fin.size = a.size;
+        printf("getfile %016llx -> sz %llu\n", inum, fin.size);
+
+        returnValue = OK;
     }
 
-    fin.atime = a.atime;
-    fin.mtime = a.mtime;
-    fin.ctime = a.ctime;
-    fin.size = a.size;
-    printf("getfile %016llx -> sz %llu\n", inum, fin.size);
+    lc->release( inum );
 
-release:
-
-    return r;
+    return returnValue;
 }
 
 
@@ -153,9 +167,15 @@ yfs_client::ilookup(inum di, std::string name) {
 
     std::string buf;
     yfs_client::inum i = 0;
+
+    lc->acquire( di );
+
     if( ec->get(di, buf) == extent_protocol::OK ) {
         i = findInum(buf, name);
     }
+
+    lc->release( di );
+
     return i;
 }
 
@@ -190,13 +210,18 @@ int
 yfs_client::readdir(inum ino, std::vector<dirent> &files) {
 
     std::string buf;
+    int returnValue = IOERR;
+
+    lc->acquire( ino );
+
     if( ec->get(ino, buf) == extent_protocol::OK ) {
         files = deserialize( buf );
-        return yfs_client::OK;
+        returnValue = OK;
     }
-    else {
-        return IOERR;
-    }
+
+    lc->release( ino );
+
+    return returnValue;
 }
 
 
@@ -204,15 +229,21 @@ int
 yfs_client::readfile(inum ino, off_t off, size_t size, std::string &buf) {
 
     std::string fileContents;
+    int returnValue = IOERR;
+
+    lc->acquire( ino );
+
     if( isfile(ino) ) {
         ec->get(ino, fileContents);
 
         buf = fileContents.substr(off, size);
-        return OK;
+        returnValue = OK;
     }
-    else {
-        return IOERR;
-    }
+
+    lc->release( ino );
+
+    return returnValue;
+
 }
 
 
@@ -220,20 +251,26 @@ int
 yfs_client::remove(inum parent, std::string name) {
 
     std::string buf, result;
-    inum i;
+    inum remInum;
+    int returnValue = IOERR;
+
+    lc->acquire( parent );
 
     if( ec->get(parent, buf) == extent_protocol::OK ) {
 
-        result = removeDirectoryFile(buf, name, i);
+        result = removeDirectoryFile(buf, name, remInum);
 
         if( ec->put(parent, result) == extent_protocol::OK ) {
 
-            if( ec->remove( i ) == extent_protocol::OK ) {
-                return OK;
+            if( ec->remove( remInum ) == extent_protocol::OK ) {
+                returnValue = OK;
             }
         }
     }
-    return IOERR;
+
+    lc->release( parent );
+
+    return returnValue;
 }
 
 
@@ -241,6 +278,7 @@ std::string
 yfs_client::removeDirectoryFile(std::string bf, std::string nodeName, inum &ri) {
 
     // TODO: OPTIMIZE!!
+    // mix deserialize here
 
     inum iRem;
     std::vector<dirent> vec = deserialize( bf );
@@ -263,6 +301,10 @@ int
 yfs_client::setattr(inum ino, struct stat *attr, int to_set) {
 
     extent_protocol::attr nodeAttr;
+    int returnValue = IOERR;
+
+    lc->acquire( ino );
+
     if( ec->getattr(ino, nodeAttr) == extent_protocol::OK ) {
 
         std::string fileContent;
@@ -270,30 +312,37 @@ yfs_client::setattr(inum ino, struct stat *attr, int to_set) {
 
             if( attr->st_size < fileContent.size() ) {
                 ec->put(ino, fileContent.substr(0, attr->st_size) );
+                returnValue = OK;
             }
-            return OK;
+//            return OK;
         }
     }
-    return IOERR;
+
+    lc->release( ino );
+
+    return returnValue;
 }
 
 
 int
 yfs_client::writefile(inum ino, std::string buf, off_t off, size_t &size) {
 
-    if( isdir(ino) ) {
-        return IOERR;
-    }
-
     std::string fileContents;
+    int returnValue = IOERR;
+
+    lc->acquire( ino );
+
     if( ec->get(ino, fileContents) == extent_protocol::OK ) {
 
         fileContents.replace(off, buf.size(), buf);
         size = buf.size();
 
         if( ec->put(ino, fileContents) == extent_protocol::OK ) {
-            return OK;
+            returnValue = OK;
         }
     }
-    return IOERR;
+
+    lc->release( ino );
+
+    return returnValue;
 }

@@ -23,11 +23,12 @@ using namespace std;
 std::map<lock_protocol::lockid_t,
 	std::pair<bool,int> > blockMap;
 
-
 pthread_mutex_t mutex;
 pthread_cond_t freetogo;
+
+
 lock_server::lock_server():
-	nacquire (0)
+    nacquire (0)
 {
 	pthread_mutex_init(&mutex, NULL);
 	pthread_cond_init (&freetogo, NULL);
