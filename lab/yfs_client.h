@@ -32,6 +32,10 @@ public:
     struct dirent {
         std::string name;
         unsigned long long inum;
+
+        bool operator < ( const struct dirent& other) const {
+            return name < other.name ;
+        }
     };
 
 

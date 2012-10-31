@@ -24,10 +24,10 @@ int
 extent_server::get(extent_protocol::extentid_t id, std::string &buf) {
 
     std::cout << "GET" << std::endl
-              << " id: " << id << std::endl
-              << " str: "<< buf << std::endl;
+              << " id: " << id << " ";
 
     if( fs.count(id) == 0 ) {
+        std::cout << "not found"  << std::endl;
         return extent_protocol::NOENT;
     }
     else {
@@ -35,6 +35,7 @@ extent_server::get(extent_protocol::extentid_t id, std::string &buf) {
 
         fs[id].second.atime = time(NULL);
 
+        std::cout << "Size: " << buf.size() << std::endl;
         return extent_protocol::OK;
     }
 
@@ -100,12 +101,22 @@ extent_server::remove(extent_protocol::extentid_t id, int &) {
 int
 extent_server::setattr(extent_protocol::extentid_t id, extent_protocol::attr a, int &foo) {
 
-    fs[id].second = a;
-    if( a.size != fs[id].second.size ) {
-        if( put( id, fs[id].first.substr(0, a.size), foo) != extent_protocol::OK ) {
-            return extent_protocol::IOERR;
-        }
+    std::cout << "SETATTR id: " << id << " " << a.size << std::endl;
+
+//    fs[id].second = a;
+    std::string buf;
+    int difference = a.size - fs[id].second.size;
+    if( difference <= 0 ) {
+        buf = fs[id].first.substr(0, a.size);
     }
+    else {
+        buf.append( difference , (char) 0 );
+    }
+
+    if( put( id, buf, foo) != extent_protocol::OK ) {
+        return extent_protocol::IOERR;
+    }
+
     return extent_protocol::OK;
 }
 
@@ -119,7 +130,7 @@ extent_server::printMap() {
 
     for( it = fs.begin() ; it != fs.end() ; it++ ) {
         std::cout << "entry: " << std::endl
-                  << "ino: " << it->first
+                  << " ino: " << it->first
                   << " buf: " << it->second.first
                   << std::endl;
     }

@@ -91,6 +91,7 @@ fuseserver_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr, int to_set
         if( yfs->setattr(ino, attr, to_set) == yfs_client::OK ) {
             getattr(ino, st);
             fuse_reply_attr(req, &st, 0);
+            return;
         }
     }
 

@@ -1,4 +1,5 @@
 // yfs client.  implements FS operations using extent and lock server
+#include <algorithm>
 #include "yfs_client.h"
 #include "extent_client.h"
 #include "lock_client.h"
@@ -82,6 +83,9 @@ yfs_client::deserialize( std::string s ) {
         }
         dsv.push_back( d );
     }
+
+    std::sort( dsv.begin(), dsv.end() );
+
     return dsv;
 }
 
@@ -121,8 +125,6 @@ yfs_client::getdir(inum inum, dirinfo &din) {
 
     printf("getdir %016llx\n", inum);
 
-    lc->acquire( inum );
-
     if (ec->getattr(inum, a) == extent_protocol::OK) {
         din.atime = a.atime;
         din.mtime = a.mtime;
@@ -130,8 +132,6 @@ yfs_client::getdir(inum inum, dirinfo &din) {
 
         returnValue = OK;
     }
-
-    lc->release( inum );
 
     return returnValue;
 }
@@ -145,8 +145,6 @@ yfs_client::getfile(inum inum, fileinfo &fin) {
 
     printf("getfile %016llx\n", inum);
 
-    lc->acquire( inum );
-
     if (ec->getattr(inum, a) == extent_protocol::OK) {
         fin.atime = a.atime;
         fin.mtime = a.mtime;
@@ -156,8 +154,6 @@ yfs_client::getfile(inum inum, fileinfo &fin) {
 
         returnValue = OK;
     }
-
-    lc->release( inum );
 
     return returnValue;
 }
@@ -169,13 +165,9 @@ yfs_client::ilookup(inum di, std::string name) {
     std::string buf;
     yfs_client::inum i = 0;
 
-    lc->acquire( di );
-
     if( ec->get(di, buf) == extent_protocol::OK ) {
         i = findInum(buf, name);
     }
-
-    lc->release( di );
 
     return i;
 }
@@ -234,8 +226,7 @@ yfs_client::readfile(inum ino, off_t off, size_t size, std::string &buf) {
 
     lc->acquire( ino );
 
-    if( isfile(ino) ) {
-        ec->get(ino, fileContents);
+    if( ec->get(ino, fileContents) == extent_protocol::OK ) {
 
         buf = fileContents.substr(off, size);
         returnValue = OK;
@@ -315,7 +306,6 @@ yfs_client::setattr(inum ino, struct stat *attr, int to_set) {
               << std::endl;
 
 
-
     lc->acquire( ino );
 
     if( ec->getattr(ino, nodeAttr) == extent_protocol::OK ) {
@@ -326,7 +316,8 @@ yfs_client::setattr(inum ino, struct stat *attr, int to_set) {
         newAttr.mtime  = attr->st_mtim.tv_nsec;
         newAttr.size   = attr->st_size;
 
-        if( ec->setattr(ino, newAttr) ) {
+        if( ec->setattr(ino, newAttr) == extent_protocol::OK ) {
+
             returnValue = OK;
         }
     }
@@ -347,8 +338,16 @@ yfs_client::writefile(inum ino, std::string buf, off_t off, size_t &size) {
 
     if( ec->get(ino, fileContents) == extent_protocol::OK ) {
 
-        fileContents.replace(off, buf.size(), buf);
+        std::cout << "before: " << fileContents;
+
+        // replace - stupid but works !!? :s
+        fileContents.replace( fileContents.size(), buf.size(), buf);
+
+        // insert
+//        fileContents.insert(off, buf);
+
         size = buf.size();
+        std::cout << " result " << fileContents << std::endl;
 
         if( ec->put(ino, fileContents) == extent_protocol::OK ) {
             returnValue = OK;
