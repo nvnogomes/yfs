@@ -12,12 +12,13 @@ class lock_protocol {
   typedef unsigned long long lockid_t;
   enum rpc_numbers {
     acquire = 0x7001,
-    release,
+    release = 0x7002,
     subscribe,	// for lab 5
     stat
   };
 };
 
+<<<<<<< HEAD:lock_protocol.h
 class rlock_protocol {
  public:
   enum xxstatus { OK, RPCERR };
@@ -28,3 +29,6 @@ class rlock_protocol {
   };
 };
 #endif 
+=======
+#endif
+>>>>>>> lab5:lab/lock_protocol.h

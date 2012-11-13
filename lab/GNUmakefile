@@ -15,7 +15,7 @@ else
 MACFLAGS=
 endif
 LDFLAGS = -L. -L/usr/local/lib
-LDLIBS = -lpthread 
+LDLIBS = -lpthread
 ifeq ($(LAB2GE),1)
 ifeq ($(shell uname -s),Darwin)
 ifeq ($(shell sw_vers -productVersion | sed -e "s/.*\(10\.[0-9]\).*/\1/"),10.6)
@@ -121,6 +121,7 @@ l2:
 	./mklab.pl 2 0 l2 GNUmakefile $(rpclib) $(yfs_client) $(extent_server) $(lock_server) start.sh\
 	 stop.sh test-lab-2.pl mkfs.sh $(hfiles2) $(hfiles1)
 
+
 l2-sol:
 	./mklab.pl 2 2 l2-sol GNUmakefile $(yfs_client) $(extent_server) $(rpclib) $(lock_server) start.sh\
 	 stop.sh test-lab-2.pl mkfs.sh $(hfiles2) $(hfiles1)
@@ -174,7 +175,8 @@ l7-sol:
 	./mklab.pl 7 7 l7-sol GNUmakefile test-lab-4-a.pl $(yfs_client) $(rpclib) $(rpctest) $(lock_server) \
 		$(extent_server) $(lock_server) start.sh stop.sh test-lab-2.pl mkfs.sh\
 		$(hfiles1) $(hfiles2) $(hfiles3) $(lock_tester) $(test-lab-4-b) $(test-lab-4-c)\
-		rsm_tester.pl $(rsm_files) $(hfiles4) 
+		rsm_tester.pl $(rsm_files) $(hfiles4)
+
 
 l8:
 	./mklab.pl 8 0 l8 GNUmakefile rsm_client.cc $(rpclib) $(hfiles5) rsm.cc rsm.h
@@ -183,10 +185,12 @@ l8-sol:
 	./mklab.pl 8 8 l8-sol GNUmakefile test-lab-4-a.pl $(yfs_client) $(rpclib) $(rpctest) $(lock_server) \
 		$(extent_server) $(lock_server) start.sh stop.sh test-lab-2.pl mkfs.sh\
 		$(hfiles1) $(hfiles2) $(hfiles3) $(lock_tester) $(test-lab-4-b) $(test-lab-4-c)\
-		rsm_tester.pl $(rsm_files) $(hfiles4) rsm_client.cc $(hfiles5) 
+		rsm_tester.pl $(rsm_files) $(hfiles4) rsm_client.cc $(hfiles5)
+
 
 -include *.d
 
 .PHONY : clean
-clean : 
+clean :
 	rm -rf rpc/rpctest rpc/*.o rpc/*.d rpc/librpc.a *.o *.d yfs_client extent_server lock_server lock_tester lock_demo rpctest test-lab-4-b test-lab-4-c
+

@@ -38,13 +38,13 @@
  object.  A connection object is deleted only when the underlying connection is
  dead and the reference count reaches zero.
 
- The previous version of the RPC library uses pthread_cancel* routines 
- to implement the deletion of rpcc and rpcs objects. The idea is to cancel 
- all active threads that might be holding a reference to an object before 
+ The previous version of the RPC library uses pthread_cancel* routines
+ to implement the deletion of rpcc and rpcs objects. The idea is to cancel
+ all active threads that might be holding a reference to an object before
  deleting that object. However, pthread_cancel is not robust and there are
  always bugs where outstanding references to deleted objects persist.
- This version of the RPC library does not do pthread_cancel, but explicitly 
- joins exited threads to make sure no outstanding references exist before 
+ This version of the RPC library does not do pthread_cancel, but explicitly
+ joins exited threads to make sure no outstanding references exist before
  deleting objects.
 
  To delete a rpcc object safely, the users of the library must ensure that
@@ -55,7 +55,7 @@
  3.  delete the dispatch thread pool which involves waiting for current active
  RPC handlers to finish.  It is interesting how a thread pool can be deleted
  without using thread cancellation. The trick is to inject x "poison pills" for
- a thread pool of x threads. Upon getting a poison pill instead of a normal 
+ a thread pool of x threads. Upon getting a poison pill instead of a normal
  task, a worker thread will exit (and thread pool destructor waits to join all
  x exited worker threads).
  */
@@ -97,8 +97,9 @@ void set_rand_seed()
 	srandom((int)ts.tv_nsec^((int)getpid()));
 }
 
-rpcc::rpcc(sockaddr_in d, bool retrans) : 
-	dst_(d), srv_nonce_(0), bind_done_(false), xid_(1), lossytest_(0), 
+
+rpcc::rpcc(sockaddr_in d, bool retrans) :
+	dst_(d), srv_nonce_(0), bind_done_(false), xid_(1), lossytest_(0),
 	retrans_(retrans), chan_(NULL)
 {
 	assert(pthread_mutex_init(&m_, 0) == 0);
@@ -108,7 +109,7 @@ rpcc::rpcc(sockaddr_in d, bool retrans) :
 		set_rand_seed();
 		clt_nonce_ = random();
 	}else{
-		//special client nonce 0 means this client does not 
+		//special client nonce 0 means this client does not
 		//require at-most-once logic from the server
 		//because it uses tcp and never retries a failed connection
 		clt_nonce_ = 0;
@@ -122,16 +123,17 @@ rpcc::rpcc(sockaddr_in d, bool retrans) :
 	//xid starts with 1 and latest received reply starts with 0
 	xid_rep_window_.push_back(0);
 
-	jsl_log(JSL_DBG_2, "rpcc::rpcc cltn_nonce is %d lossy %d\n", 
-			clt_nonce_, lossytest_); 
+
+	jsl_log(JSL_DBG_2, "rpcc::rpcc cltn_nonce is %d lossy %d\n",
+			clt_nonce_, lossytest_);
 }
 
 //IMPORTANT: destruction should happen only when no external threads
 //are blocked inside rpcc or will use rpcc in the future
 rpcc::~rpcc()
 {
-	jsl_log(JSL_DBG_2, "rpcc::~rpcc delete nonce %d channo=%d\n", 
-			clt_nonce_, chan_?chan_->channo():-1); 
+	jsl_log(JSL_DBG_2, "rpcc::~rpcc delete nonce %d channo=%d\n",
+			clt_nonce_, chan_?chan_->channo():-1);
 	if (chan_) {
 		chan_->closeconn();
 		chan_->decref();
@@ -151,7 +153,7 @@ rpcc::bind(TO to)
 		bind_done_ = true;
 		srv_nonce_ = r;
 	} else {
-		jsl_log(JSL_DBG_2, "rpcc::bind %s failed %d\n", 
+		jsl_log(JSL_DBG_2, "rpcc::bind %s failed %d\n",
 				inet_ntoa(dst_.sin_addr), ret);
 	}
 	return ret;
@@ -181,10 +183,10 @@ rpcc::call1(unsigned int proc, marshall &req, unmarshall &rep,
 
 
 	TO curr_to;
-	struct timespec now, nextdeadline, finaldeadline; 
+	struct timespec now, nextdeadline, finaldeadline;
 
 	clock_gettime(CLOCK_REALTIME, &now);
-	add_timespec(now, to.to, &finaldeadline); 
+	add_timespec(now, to.to, &finaldeadline);
 	curr_to.to = to_min.to;
 
 	bool transmit = true;
@@ -196,9 +198,9 @@ rpcc::call1(unsigned int proc, marshall &req, unmarshall &rep,
 			get_refconn(&ch);
 			if (ch) {
 				ch->send(req.cstr(), req.size());
-				jsl_log(JSL_DBG_2, 
-						"rpcc::call1 %u just sent req proc %x xid %u clt_nonce %d\n", 
-						clt_nonce_, proc, ca.xid, clt_nonce_); 
+				jsl_log(JSL_DBG_2,
+						"rpcc::call1 %u just sent req proc %x xid %u clt_nonce %d\n",
+						clt_nonce_, proc, ca.xid, clt_nonce_);
 			}
 			transmit = false; //only send once on a given channel
 		}
@@ -207,7 +209,7 @@ rpcc::call1(unsigned int proc, marshall &req, unmarshall &rep,
 			break;
 
 		clock_gettime(CLOCK_REALTIME, &now);
-		add_timespec(now, curr_to.to, &nextdeadline); 
+		add_timespec(now, curr_to.to, &nextdeadline);
 		if (cmp_timespec(nextdeadline,finaldeadline) > 0) {
 			nextdeadline = finaldeadline;
 			finaldeadline.tv_sec = 0;
@@ -224,14 +226,15 @@ rpcc::call1(unsigned int proc, marshall &req, unmarshall &rep,
 		}
 
 		if (retrans_ && (!ch || ch->isdead())) {
-			//since connection is dead, we retransmit on the new connection 
-			transmit = true; 
+			//since connection is dead, we retransmit on the new connection
+			transmit = true;
 		}
 		curr_to.to <<= 1;
 	}
 
-	{ 
-		ScopedLock ml(&m_); //no locking of ca.m because no one but this thread changes ca.xid 
+
+	{
+		ScopedLock ml(&m_); //no locking of ca.m because no one but this thread changes ca.xid
 		calls_.erase(ca.xid);
 		// we potentially need to update the xid again here, in case the
 		// packet times out before it's even sent by the channel.  nasty.
@@ -241,8 +244,9 @@ rpcc::call1(unsigned int proc, marshall &req, unmarshall &rep,
 
 	ScopedLock cal(&ca.m);
 
-	jsl_log(JSL_DBG_2, 
-			"rpcc::call1 %u wait over for req proc %x xid %u %s:%d done? %d ret %d \n", 
+
+	jsl_log(JSL_DBG_2,
+			"rpcc::call1 %u wait over for req proc %x xid %u %s:%d done? %d ret %d \n",
 			clt_nonce_, proc, ca.xid, inet_ntoa(dst_.sin_addr),
 			ntohs(dst_.sin_port), ca.done, ca.intret);
 
@@ -270,12 +274,13 @@ rpcc::get_refconn(connection **ch)
 	}
 }
 
-//PollMgr's thread is being used to 
-//make this upcall from connection object to 
-//rpcc. 
-//this funtion must not block 
+
+//PollMgr's thread is being used to
+//make this upcall from connection object to
+//rpcc.
+//this funtion must not block
 //
-//this function keeps no reference for connection *c 
+//this function keeps no reference for connection *c
 bool
 rpcc::got_pdu(connection *c, char *b, int sz)
 {
@@ -313,7 +318,7 @@ rpcc::got_pdu(connection *c, char *b, int sz)
 }
 
 // assumes thread holds mutex m
-void 
+void
 rpcc::update_xid_rep(unsigned int xid)
 {
 	std::list<unsigned int>::iterator it;
@@ -380,7 +385,7 @@ rpcs::got_pdu(connection *c, char *b, int sz)
 		c->decref();
 		delete j;
 	}
-	return succ; 
+	return succ;
 }
 
 void
@@ -415,7 +420,7 @@ rpcs::updatestat(unsigned int proc)
 			if (clt->second.size() > maxrep)
 				maxrep = clt->second.size();
 		}
-		jsl_log(JSL_DBG_1, "REPLY WINDOW: clients %d total reply %d max per client %d\n", 
+		jsl_log(JSL_DBG_1, "REPLY WINDOW: clients %d total reply %d max per client %d\n",
 				reply_window_.size(), totalrep, maxrep);
 		curr_counts_ = counting_;
 	}
@@ -482,7 +487,7 @@ rpcs::dispatch(djob_t *j)
 			if (reply_window_.find(h.clt_nonce) == reply_window_.end()) {
 				assert (reply_window_[h.clt_nonce].size() == 0); // create
 				jsl_log(JSL_DBG_2,
-						"rpcs::dispatch: new client %u xid %d chan %d, total clients %d\n", 
+						"rpcs::dispatch: new client %u xid %d chan %d, total clients %d\n",
 						h.clt_nonce, h.xid, c->channo(), (int)reply_window_.size());
 			}
 		}
@@ -513,7 +518,7 @@ rpcs::dispatch(djob_t *j)
 			}
 
 			rh.ret = f->fn(req, rep);
-			assert(rh.ret >= 0 || 
+			assert(rh.ret >= 0 ||
 					rh.ret == rpc_const::unmarshal_args_failure);
 
 			rep.pack_reply_header(rh);
@@ -550,7 +555,8 @@ rpcs::dispatch(djob_t *j)
 			c->send(b1, sz1);
 			break;
 		case FORGOTTEN: //very old request and we don't have the response anymore
-			jsl_log(JSL_DBG_2, "rpcs::dispatch: very old request %u from %u\n", 
+
+			jsl_log(JSL_DBG_2, "rpcs::dispatch: very old request %u from %u\n",
 					h.xid, h.clt_nonce);
 			rh.ret = rpc_const::atmostonce_failure;
 			rep.pack_reply_header(rh);
@@ -560,12 +566,31 @@ rpcs::dispatch(djob_t *j)
 	c->decref();
 }
 
+
+/*
+ * remember the RPC reply values
+ */
 void
 rpcs::add_reply(unsigned int clt_nonce, unsigned int xid,
 		char *b, int sz)
 {
+
 	ScopedLock rwl(&reply_window_m_);
+	std::list<reply_t>::iterator it;
+
+	if( reply_window_.find( clt_nonce ) != reply_window_.end() ) {
+
+		for (it = reply_window_[clt_nonce].begin(); it != reply_window_[clt_nonce].end(); it++) {
+			if( (*it).xid == xid ) {
+				(*it).cb_present = true;
+				(*it).buf = b;
+				(*it).sz = sz;
+				break;
+			}
+		}
+	}
 }
+
 
 void
 rpcs::free_reply_window(void)
@@ -583,17 +608,57 @@ rpcs::free_reply_window(void)
 	reply_window_.clear();
 }
 
-rpcs::rpcstate_t 
+/*
+ * eliminate duplicate xid and update the appropriate information to help the server safely forget about certain received RPCs.
+*/
+rpcs::rpcstate_t
 rpcs::checkduplicate_and_update(unsigned int clt_nonce, unsigned int xid,
 		unsigned int xid_rep, char **b, int *sz)
 {
 	ScopedLock rwl(&reply_window_m_);
+	std::list<reply_t>::iterator it;
 
-	return NEW;
+	int min = reply_window_[clt_nonce].empty() ? 0 : 300000 ;
+
+	for (it = reply_window_[clt_nonce].begin(); it != reply_window_[clt_nonce].end(); it++) {
+
+		if( (int)(*it).xid < min ) {
+			min = (*it).xid;
+		}
+
+		if( (*it).xid == xid ) {
+
+			if( (*it).cb_present ) {
+				*b = (*it).buf;
+				*sz = (*it).sz;
+				return DONE;
+			}
+			else {
+				return INPROGRESS;
+			}
+		}
+
+		if( (int)(*it).xid < xid_rep ) {
+			reply_window_[clt_nonce].erase( it );
+			it--;
+		}
+	}
+
+	// add new request
+	if( (int)xid > min ) {
+		reply_t aux(xid);
+		reply_window_[clt_nonce].push_front( aux );
+		return NEW;
+	}
+	else {
+		return FORGOTTEN;
+	}
+
+
 }
 
 //rpc handler
-int 
+int
 rpcs::rpcbind(int a, int &r)
 {
 	jsl_log(JSL_DBG_2, "rpcs::rpcbind called return nonce %u\n", nonce_);
