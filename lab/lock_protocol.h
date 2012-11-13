@@ -18,7 +18,6 @@ class lock_protocol {
   };
 };
 
-<<<<<<< HEAD:lock_protocol.h
 class rlock_protocol {
  public:
   enum xxstatus { OK, RPCERR };
@@ -28,7 +27,5 @@ class rlock_protocol {
     retry = 0x8002
   };
 };
-#endif 
-=======
 #endif
->>>>>>> lab5:lab/lock_protocol.h
+
