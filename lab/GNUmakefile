@@ -29,8 +29,8 @@ endif
 endif
 LDLIBS += $(shell test -f `gcc -print-file-name=librt.so` && echo -lrt)
 LDLIBS += $(shell test -f `gcc -print-file-name=libdl.so` && echo -ldl)
-CC = g++
-CXX = g++
+CC = g++-4.6
+CXX = g++-4.6
 
 lab:  lab7
 lab1: rpc/rpctest lock_server lock_tester lock_demo
@@ -102,6 +102,9 @@ test-lab-4-b:  $(patsubst %.c,%.o,$(test_lab_4-b)) rpc/librpc.a
 
 test-lab-4-c=test-lab-4-c.c
 test-lab-4-c:  $(patsubst %.c,%.o,$(test_lab_4-c)) rpc/librpc.a
+
+rsm_tester=rsm_tester.cc rsmtest_client.cc
+rsm_tester:  $(patsubst %.c,%.o,$(rsm_tester)) rpc/librpc.a
 
 rsm_tester=rsm_tester.cc rsmtest_client.cc
 rsm_tester:  $(patsubst %.c,%.o,$(rsm_tester)) rpc/librpc.a
