@@ -68,11 +68,26 @@ class proposer {
 
   pthread_mutex_t pxs_mutex;
 
-  // Proposer state
+
+  /**
+   * @brief stable : Proposer state
+   */
   bool stable;
-  std::vector<std::string> c_nodes;	// nodes in this instance
-  std::string c_v;	// value we would like to propose
-  prop_t my_n;		// number of the last proposal used in this instance
+
+  /**
+   * @brief c_nodes : nodes in this instance
+   */
+  std::vector<std::string> c_nodes;
+
+  /**
+   * @brief c_v : value we would like to propose
+   */
+  std::string c_v;
+
+  /**
+   * @brief my_n : number of the last proposal used in this instance
+   */
+  prop_t my_n;
 
   void setn();
   bool prepare(unsigned instance, std::vector<std::string> &accepts, 
