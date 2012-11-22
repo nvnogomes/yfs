@@ -59,7 +59,7 @@ proposer::isrunning()
 
 // check if the servers in l2 contains a majority of servers in l1
 bool
-proposer::majority(const std::vector<std::string> &l1, 
+proposer::majority(const std::vector<std::string> &l1,
                    const std::vector<std::string> &l2)
 {
     unsigned n = 0;
@@ -71,11 +71,12 @@ proposer::majority(const std::vector<std::string> &l1,
     return n >= (l1.size() >> 1) + 1;
 }
 
-proposer::proposer(class paxos_change *_cfg, class acceptor *_acceptor, 
+proposer::proposer(class paxos_change *_cfg, class acceptor *_acceptor,
                    std::string _me)
     : cfg(_cfg), acc (_acceptor), me (_me), break1 (false), break2 (false),
       stable (true)
 {
+    my_n.m = _me;
     assert (pthread_mutex_init(&pxs_mutex, NULL) == 0);
 
 }
@@ -104,6 +105,7 @@ proposer::run(int instance, std::vector<std::string> newnodes, std::string newv)
         return false;
     }
     stable = false;
+
     setn();
     accepts.clear();
     nodes.clear();
@@ -157,7 +159,7 @@ proposer::run(int instance, std::vector<std::string> newnodes, std::string newv)
  * @return
  */
 bool
-proposer::prepare(unsigned instance, std::vector<std::string> &accepts, 
+proposer::prepare(unsigned instance, std::vector<std::string> &accepts,
                   std::vector<std::string> nodes,
                   std::string &v)
 {
@@ -181,17 +183,17 @@ proposer::prepare(unsigned instance, std::vector<std::string> &accepts,
 			if( res.oldinstance == 0) {
 		        if( res.accept ){
 		            accepts.push_back( *node );
+
                 }
 
                 // update biggest propose
                 if(res.n_a > arg.n ){
                     v = res.v_a;
                 }
-
-			}
-			else{
+            }
+            else{
                 acc->commit(instance, res.v_a);
-			}
+            }
         }
     }
     return true;
@@ -221,7 +223,9 @@ proposer::accept(unsigned instance, std::vector<std::string> &accepts,
 
         arg.v = v;
         int accepted;
+        pthread_mutex_unlock(&pxs_mutex);
         int result = hdl.get_rpcc()->call(paxos_protocol::acceptreq, me, arg, accepted, rpcc::to(1000));
+        pthread_mutex_lock(&pxs_mutex);
 
         if(result == paxos_protocol::OK){
             if( accepted ){
@@ -240,7 +244,7 @@ proposer::accept(unsigned instance, std::vector<std::string> &accepts,
  * @param v : view
  */
 void
-proposer::decide(unsigned instance, std::vector<std::string> accepts, 
+proposer::decide(unsigned instance, std::vector<std::string> accepts,
                  std::string v)
 {
     // TODO
@@ -258,7 +262,7 @@ proposer::decide(unsigned instance, std::vector<std::string> accepts,
    }
 }
 
-acceptor::acceptor(class paxos_change *_cfg, bool _first, std::string _me, 
+acceptor::acceptor(class paxos_change *_cfg, bool _first, std::string _me,
                    std::string _value)
     : cfg(_cfg), me (_me), instance_h(0)
 {
@@ -385,13 +389,7 @@ acceptor::acceptreq(std::string src, paxos_protocol::acceptarg a, int &r)
 paxos_protocol::status
 acceptor::decidereq(std::string src, paxos_protocol::decidearg a, int &r)
 {
-    // handle an decide message from proposer
-    if (a.instance <= this->instance_h ){
-        r = 0;
-    } else {
-        this->commit(a.instance, a.v);
-        r = 1;
-    }
+    this->commit(a.instance, a.v);
     return paxos_protocol::OK;
 
 }
