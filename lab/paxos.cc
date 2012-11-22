@@ -177,12 +177,14 @@ proposer::prepare(unsigned instance, std::vector<std::string> &accepts,
 
         // send prepare(n) to all acceptors
         paxos_protocol::prepareres res;
+        pthread_mutex_unlock(&pxs_mutex);
         int result = hdl.get_rpcc()->call(paxos_protocol::preparereq, this->me, arg, res, rpcc::to(1000));
+        pthread_mutex_lock(&pxs_mutex);
 
         if( result == paxos_protocol::OK ) {
-			if( res.oldinstance == 0) {
-		        if( res.accept ){
-		            accepts.push_back( *node );
+            if( res.oldinstance == 0) {
+                if( res.accept ){
+                    accepts.push_back( *node );
 
                 }
 
@@ -258,7 +260,9 @@ proposer::decide(unsigned instance, std::vector<std::string> accepts,
        arg.v = v;
 
        int r;
+       pthread_mutex_unlock(&pxs_mutex);
        hdl.get_rpcc()->call(paxos_protocol::decidereq, me, arg, r, rpcc::to(1000));
+       pthread_mutex_lock(&pxs_mutex);
    }
 }
 
@@ -310,6 +314,8 @@ acceptor::preparereq(std::string src, paxos_protocol::preparearg a,
                      paxos_protocol::prepareres &r)
 {
     // handle a preparereq message from proposer
+    pthread_mutex_lock(&pxs_mutex);
+
     if(a.instance <= this->instance_h){
 
         // reply to update old instance
@@ -338,6 +344,8 @@ acceptor::preparereq(std::string src, paxos_protocol::preparearg a,
             r.accept = 0;
         }
     }
+    pthread_mutex_unlock(&pxs_mutex);
+
 
     return paxos_protocol::OK;
 }
@@ -361,6 +369,8 @@ paxos_protocol::status
 acceptor::acceptreq(std::string src, paxos_protocol::acceptarg a, int &r)
 {
     // handle an acceptreq message from proposer
+    pthread_mutex_lock(&pxs_mutex);
+
     if(a.n >= this->n_h){
         this->n_a = a.n;
         this->v_a = a.v;
@@ -372,7 +382,7 @@ acceptor::acceptreq(std::string src, paxos_protocol::acceptarg a, int &r)
     }else{
         r = 0;
     }
-
+    pthread_mutex_unlock(&pxs_mutex);
     return paxos_protocol::OK;
 }
 
@@ -389,9 +399,10 @@ acceptor::acceptreq(std::string src, paxos_protocol::acceptarg a, int &r)
 paxos_protocol::status
 acceptor::decidereq(std::string src, paxos_protocol::decidearg a, int &r)
 {
-    this->commit(a.instance, a.v);
-    return paxos_protocol::OK;
 
+  // handle an decide message from proposer
+  this->commit(a.instance, a.v);
+  return paxos_protocol::OK;
 }
 
 void
