@@ -310,13 +310,11 @@ rsm::joinreq(std::string m, viewstamp last, rsm_protocol::joinres &r)
     } else {
         // Lab 7: invoke config to create a new view that contains m
 
-        // lab5
+        // Lab 5
         if( cfg->add(m) ) {
             r.log = cfg->dump();
-            printf("joinreq: ok\n");
-        }
-        else {
-			// error
+        } else {
+            ret = rsm_protocol::ERR;
         }
     }
     assert (pthread_mutex_unlock(&rsm_mutex) == 0);
