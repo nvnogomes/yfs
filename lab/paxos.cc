@@ -1,4 +1,5 @@
 #include "paxos.h"
+#include <iostream>
 #include "handle.h"
 // #include <signal.h>
 #include <stdio.h>
@@ -106,6 +107,8 @@ proposer::run(int instance, std::vector<std::string> newnodes, std::string newv)
     accepts.clear();
     nodes.clear();
     v.clear();
+	c_nodes = newnodes;
+	c_v = newv;
     nodes = c_nodes;
     if (prepare(instance, accepts, nodes, v)) {
 
@@ -159,35 +162,34 @@ proposer::prepare(unsigned instance, std::vector<std::string> &accepts,
 {
     // TODO
     //send prepare(instance, n) to all servers including self
-    for(int i = 0; i<nodes.size(); i++){
-        handle h(nodes[i]);
 
-        paxos_protocol::preparearg arg;
+    paxos_protocol::preparearg arg;
+    arg.instance = instance;
+    arg.n = this->my_n;
+    arg.v = this->c_v;
 
-        arg.instance = instance;
-        arg.n = this->my_n;
-        arg.v = this->c_v;
+    std::vector<std::string>::iterator node;
+    for(node = nodes.begin() ; node != nodes.end() ; node++) {
+        handle hdl( *node );
 
         // send prepare(n) to all acceptors
         paxos_protocol::prepareres res;
-        int result = h.get_rpcc()->call(paxos_protocol::preparereq, this->me, arg, res, rpcc::to(1000));
+        int result = hdl.get_rpcc()->call(paxos_protocol::preparereq, this->me, arg, res);
 
-        if(result == paxos_protocol::OK){
-            if(res.accept == 1){
-                // prepare ok
-                accepts.push_back(nodes[i]);
+        if( result == paxos_protocol::OK ) {
+			if( res.oldinstance == 0) {
+		        if( res.accept ){
+		            accepts.push_back( *node );
 
-                //Guardar o v do n maior
-                if(res.n_a > arg.n){
-                    v = res.v_a;
-                }
-            }
-            else {
-                if(res.accept == -1){
-                    this->acc->commit(res.oldinstance, res.v_a);
-                    this->cfg->paxos_commit(res.oldinstance, res.v_a);
-                }
-            }
+		            // update biggest propose
+		            if(res.n_a > arg.n ){
+		                v = res.v_a;
+		            }
+		        }
+			}
+			else{
+                acc->commit(instance, res.v_a);
+			}
         }
     }
     return true;
@@ -206,48 +208,51 @@ proposer::accept(unsigned instance, std::vector<std::string> &accepts,
                  std::vector<std::string> nodes, std::string v)
 {
     // TODO
-    for(int i = 0; i<nodes.size(); i++){
-        handle h(nodes[i]);
+    std::vector<std::string>::iterator node;
+    for(node = nodes.begin() ; node != nodes.end() ; node++) {
+        handle hdl( *node );
+
 
         paxos_protocol::acceptarg arg;
         arg.instance=instance;
         arg.n = my_n;
-        arg.v = c_v; //propose valuefor
-        int accepted_n;
-        int result = h.get_rpcc()->call(paxos_protocol::acceptreq, me, arg, accepted_n, rpcc::to(1000));
+
+        arg.v = v;
+        int accepted;
+        int result = hdl.get_rpcc()->call(paxos_protocol::acceptreq, me, arg, accepted);
 
         if(result == paxos_protocol::OK){
-            if(accepted_n != -1){
-                accepts.push_back(nodes[i]);
+            if( accepted ){
+                accepts.push_back( *node );
             }
         }
 
     }
+
 }
 
 /**
  * @brief proposer::decide
  * @param instance
  * @param accepts
- * @param v
+ * @param v : view
  */
 void
 proposer::decide(unsigned instance, std::vector<std::string> accepts, 
                  std::string v)
 {
     // TODO
-    this->acc->commit(instance, v);
-    this->cfg->paxos_commit(instance, v);
 
-    for(int i = 0; i<accepts.size(); i++){
-        handle h(accepts[i]);
+    std::vector<std::string>::iterator node;
+    for(node = accepts.begin() ; node != accepts.end() ; node++) {
+        handle hdl( *node );
 
         paxos_protocol::decidearg arg;
         arg.instance = instance;
         arg.v = v;
 
         int r;
-        h.get_rpcc()->call(paxos_protocol::decidereq, me, arg, r, rpcc::to(1000));
+        hdl.get_rpcc()->call(paxos_protocol::decidereq, me, arg, r);
     }
 }
 
@@ -299,28 +304,34 @@ acceptor::preparereq(std::string src, paxos_protocol::preparearg a,
                      paxos_protocol::prepareres &r)
 {
     // handle a preparereq message from proposer
-
     if(a.instance <= this->instance_h){
 
-        // reply oldinstance
-        r.accept = -1;
-        r.oldinstance = this->instance_h;
+        // reply to update old instance
+        r.accept = 0;
+        r.oldinstance = 1;
         r.n_a = this->n_a;
         r.v_a = this->values[a.instance];
 
-    }else if(a.n > this->n_h){
-
-        // Temos um novo n maior.
-        this->n_h = a.n;
-        this->l->loghigh(a.n);
-
-        r.accept = 1;
+    }
+    else {
+        r.oldinstance = 0;
         r.n_a = this->n_a;
         r.v_a = this->v_a;
-    }else{
-        //ignorar
-        r.accept = -1;
-        r.oldinstance = -1;
+
+        if(a.n > this->n_h){
+
+            // log new value
+            this->n_h = a.n;
+            this->l->loghigh(a.n);
+
+            // prepare_ok
+            r.accept = 1;
+            r.oldinstance = 0;
+        }
+        else{
+            // ignore
+            r.accept = 0;
+        }
     }
 
     return paxos_protocol::OK;
@@ -349,14 +360,12 @@ acceptor::acceptreq(std::string src, paxos_protocol::acceptarg a, int &r)
         this->n_a = a.n;
         this->v_a = a.v;
 
-        r = a.n.n;
-        this->n_a = a.n;
-        this->v_a = a.v;
+        r = 1;
 
         //Log max acepted prop
         this->l->logprop(a.n, a.v);
     }else{
-        r = -1;
+        r = 0;
     }
 
     return paxos_protocol::OK;
@@ -377,7 +386,7 @@ acceptor::decidereq(std::string src, paxos_protocol::decidearg a, int &r)
 {
     // handle an decide message from proposer
     if (a.instance <= this->instance_h ){
-        // ignore
+        r = 0;
     } else {
         this->commit(a.instance, a.v);
         r = 1;
