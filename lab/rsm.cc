@@ -312,11 +312,13 @@ rsm::joinreq(std::string m, viewstamp last, rsm_protocol::joinres &r)
 
         // lab5
         if( cfg->add(m) ) {
+			// response
             r.log = cfg->dump();
             printf("joinreq: ok\n");
         }
         else {
 			// error
+            ret = rsm_protocol::ERR;
         }
     }
     assert (pthread_mutex_unlock(&rsm_mutex) == 0);

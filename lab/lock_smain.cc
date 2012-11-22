@@ -30,6 +30,8 @@ main(int argc, char *argv[])
   if(count_env != NULL){
     count = atoi(count_env);
   }
+  // clean warnings...
+  printf("RPC COUNT: %i", count);
 
   //jsl_set_debug(2);
   // Comment out the next line to switch between the ordinary lock
