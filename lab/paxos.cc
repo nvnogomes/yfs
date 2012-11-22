@@ -103,12 +103,13 @@ proposer::run(int instance, std::vector<std::string> newnodes, std::string newv)
         pthread_mutex_unlock(&pxs_mutex);
         return false;
     }
+    stable = false;
     setn();
     accepts.clear();
     nodes.clear();
     v.clear();
-	c_nodes = newnodes;
-	c_v = newv;
+    c_nodes = newnodes;
+    c_v = newv;
     nodes = c_nodes;
     if (prepare(instance, accepts, nodes, v)) {
 
@@ -174,18 +175,19 @@ proposer::prepare(unsigned instance, std::vector<std::string> &accepts,
 
         // send prepare(n) to all acceptors
         paxos_protocol::prepareres res;
-        int result = hdl.get_rpcc()->call(paxos_protocol::preparereq, this->me, arg, res);
+        int result = hdl.get_rpcc()->call(paxos_protocol::preparereq, this->me, arg, res, rpcc::to(1000));
 
         if( result == paxos_protocol::OK ) {
 			if( res.oldinstance == 0) {
 		        if( res.accept ){
 		            accepts.push_back( *node );
+                }
 
-		            // update biggest propose
-		            if(res.n_a > arg.n ){
-		                v = res.v_a;
-		            }
-		        }
+                // update biggest propose
+                if(res.n_a > arg.n ){
+                    v = res.v_a;
+                }
+
 			}
 			else{
                 acc->commit(instance, res.v_a);
@@ -219,7 +221,7 @@ proposer::accept(unsigned instance, std::vector<std::string> &accepts,
 
         arg.v = v;
         int accepted;
-        int result = hdl.get_rpcc()->call(paxos_protocol::acceptreq, me, arg, accepted);
+        int result = hdl.get_rpcc()->call(paxos_protocol::acceptreq, me, arg, accepted, rpcc::to(1000));
 
         if(result == paxos_protocol::OK){
             if( accepted ){
@@ -243,17 +245,17 @@ proposer::decide(unsigned instance, std::vector<std::string> accepts,
 {
     // TODO
 
-    std::vector<std::string>::iterator node;
-    for(node = accepts.begin() ; node != accepts.end() ; node++) {
-        handle hdl( *node );
+   std::vector<std::string>::iterator node;
+   for(node = accepts.begin() ; node != accepts.end() ; node++) {
+       handle hdl( *node );
 
-        paxos_protocol::decidearg arg;
-        arg.instance = instance;
-        arg.v = v;
+       paxos_protocol::decidearg arg;
+       arg.instance = instance;
+       arg.v = v;
 
-        int r;
-        hdl.get_rpcc()->call(paxos_protocol::decidereq, me, arg, r);
-    }
+       int r;
+       hdl.get_rpcc()->call(paxos_protocol::decidereq, me, arg, r, rpcc::to(1000));
+   }
 }
 
 acceptor::acceptor(class paxos_change *_cfg, bool _first, std::string _me, 
@@ -307,7 +309,6 @@ acceptor::preparereq(std::string src, paxos_protocol::preparearg a,
     if(a.instance <= this->instance_h){
 
         // reply to update old instance
-        r.accept = 0;
         r.oldinstance = 1;
         r.n_a = this->n_a;
         r.v_a = this->values[a.instance];
