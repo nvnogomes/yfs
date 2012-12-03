@@ -27,8 +27,8 @@ pthread_mutex_t mutex;
 pthread_cond_t freetogo;
 
 
-lock_server::lock_server():
-    nacquire (0)
+lock_server::lock_server(class rsm *_rsm):
+	rsm(_rsm), nacquire (0)
 {
 	pthread_mutex_init(&mutex, NULL);
 	pthread_cond_init (&freetogo, NULL);

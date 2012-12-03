@@ -83,6 +83,7 @@
 
 #include "handle.h"
 #include "rsm.h"
+#include "rsm_client.h"
 
 static void *
 recoverythread(void *x)
@@ -94,7 +95,7 @@ recoverythread(void *x)
 
 
 
-rsm::rsm(std::string _first, std::string _me) 
+rsm::rsm(std::string _first, std::string _me)
     : stf(0), primary(_first), insync (false), inviewchange (false), nbackup (0), partitioned (false), dopartition(false), break1(false), break2(false)
 {
     pthread_t th;
@@ -132,6 +133,13 @@ rsm::rsm(std::string _first, std::string _me)
     assert(pthread_mutex_unlock(&rsm_mutex)==0);
 }
 
+void
+rsm::reg1(int proc, handler *h)
+{
+  assert(pthread_mutex_lock(&rsm_mutex)==0);
+  procs[proc] = h;
+  assert(pthread_mutex_unlock(&rsm_mutex)==0);
+}
 
 // The recovery thread runs this function
 void
@@ -162,7 +170,7 @@ rsm::recovery()
 bool
 rsm::sync_with_backups()
 {
-    // For lab 8
+    // For lab 6
     return true;
 }
 
@@ -170,7 +178,7 @@ rsm::sync_with_backups()
 bool
 rsm::sync_with_primary()
 {
-    // For lab 8
+    // For lab 6
     return true;
 }
 
@@ -182,13 +190,33 @@ rsm::sync_with_primary()
 bool
 rsm::statetransfer(std::string m)
 {
-    // For lab 8
-    return true;
+    rsm_protocol::transferres r;
+  handle h(m);
+  int ret;
+  printf("rsm::statetransfer: contact %s w. my last_myvs(%d,%d)\n",
+	 m.c_str(), last_myvs.vid, last_myvs.seqno);
+  if (h.get_rpcc()) {
+    assert(pthread_mutex_unlock(&rsm_mutex)==0);
+    ret = h.get_rpcc()->call(rsm_protocol::transferreq, cfg->myaddr(),
+			     last_myvs, r, rpcc::to(1000));
+    assert(pthread_mutex_lock(&rsm_mutex)==0);
+  }
+  if (h.get_rpcc() == 0 || ret != rsm_protocol::OK) {
+    printf("rsm::statetransfer: couldn't reach %s %lx %d\n", m.c_str(),
+	   (long unsigned) h.get_rpcc(), ret);
+    return false;
+  }
+  if (stf && last_myvs != r.last) {
+    stf->unmarshal_state(r.state);
+  }
+  last_myvs = r.last;
+  printf("rsm::statetransfer transfer from %s success, vs(%d,%d)\n",
+	 m.c_str(), last_myvs.vid, last_myvs.seqno);
 }
 
 bool
 rsm::statetransferdone(std::string m) {
-    // For lab 8
+    // For lab 6
     return true;
 }
 
@@ -223,8 +251,8 @@ rsm::join(std::string m) {
  * completed a view change
  */
 
-void 
-rsm::commit_change() 
+void
+rsm::commit_change()
 {
     pthread_mutex_lock(&rsm_mutex);
     // Lab 7:
@@ -237,6 +265,21 @@ rsm::commit_change()
 }
 
 
+std::string
+rsm::execute(int procno, std::string req)
+{
+  printf("execute\n");
+  handler *h = procs[procno];
+  assert(h);
+  unmarshall args(req);
+  marshall rep;
+  std::string reps;
+  rsm_protocol::status ret = h->fn(args, rep);
+  marshall rep1;
+  rep1 << ret;
+  rep1 << rep.str();
+  return rep1.str();
+}
 
 //
 // Clients call client_invoke to invoke a procedure on the replicated state
@@ -248,22 +291,22 @@ rsm_client_protocol::status
 rsm::client_invoke(int procno, std::string req, std::string &r)
 {
     int ret = rsm_protocol::OK;
-    // For lab 8
+    // For lab 6
     return ret;
 }
 
-// 
-// The primary calls the internal invoke at each member of the
-// replicated state machine 
 //
-// the replica must execute requests in order (with no gaps) 
-// according to requests' seqno 
+// The primary calls the internal invoke at each member of the
+// replicated state machine
+//
+// the replica must execute requests in order (with no gaps)
+// according to requests' seqno
 
 rsm_protocol::status
 rsm::invoke(int proc, viewstamp vs, std::string req, int &dummy)
 {
     rsm_protocol::status ret = rsm_protocol::OK;
-    // For lab 8
+    // For lab 6
     return ret;
 }
 
@@ -275,7 +318,11 @@ rsm::transferreq(std::string src, viewstamp last, rsm_protocol::transferres &r)
 {
     assert(pthread_mutex_lock(&rsm_mutex)==0);
     int ret = rsm_protocol::OK;
-    // For lab 8
+    printf("transferreq from %s (%d,%d) vs (%d,%d)\n", src.c_str(),
+	 last.vid, last.seqno, last_myvs.vid, last_myvs.seqno);
+  if (stf && last != last_myvs)
+    r.state = stf->marshal_state();
+  r.last = last_myvs;
     assert(pthread_mutex_unlock(&rsm_mutex)==0);
     return ret;
 }
@@ -288,7 +335,7 @@ rsm::transferdonereq(std::string m, int &r)
 {
     int ret = rsm_client_protocol::OK;
     assert (pthread_mutex_lock(&rsm_mutex) == 0);
-    // For lab 8
+    // For lab 6
     assert (pthread_mutex_unlock(&rsm_mutex) == 0);
     return ret;
 }
@@ -404,7 +451,7 @@ rsm::net_repair_wo(bool heal)
     rsmrpc->set_reachable(heal);
 }
 
-rsm_test_protocol::status 
+rsm_test_protocol::status
 rsm::test_net_repairreq(int heal, int &r)
 {
     assert(pthread_mutex_lock(&rsm_mutex)==0);
@@ -424,7 +471,7 @@ rsm::test_net_repairreq(int heal, int &r)
 
 // simulate failure at breakpoint 1 and 2
 
-void 
+void
 rsm::breakpoint1()
 {
     if (break1) {
@@ -433,13 +480,23 @@ rsm::breakpoint1()
     }
 }
 
-void 
+void
 rsm::breakpoint2()
 {
     if (break2) {
         printf("Dying at breakpoint 2 in rsm!\n");
         exit(1);
     }
+}
+
+void
+rsm::partition1()
+{
+  if (dopartition) {
+    net_repair_wo(false);
+    dopartition = false;
+    partitioned = true;
+  }
 }
 
 rsm_test_protocol::status

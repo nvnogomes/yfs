@@ -31,6 +31,7 @@ rsm_client::rsm_client(std::string dst)
 void
 rsm_client::primary_failure()
 {
+  // for lab 6
 }
 
 rsm_protocol::status
