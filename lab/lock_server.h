@@ -11,6 +11,9 @@
 
 class lock_server {
 
+private:
+    class rsm *rsm;
+
 protected:
     int nacquire;
 
