@@ -146,6 +146,7 @@ void
 rsm::recovery()
 {
     bool r = false;
+    inviewchange = true;                            // lab6
 
     assert(pthread_mutex_lock(&rsm_mutex)==0);
 
@@ -167,6 +168,12 @@ rsm::recovery()
     assert(pthread_mutex_unlock(&rsm_mutex)==0);
 }
 
+
+/**
+ * @brief rsm::sync_with_backups
+ *
+ * @return true if , false otherwise
+ */
 bool
 rsm::sync_with_backups()
 {
@@ -175,6 +182,11 @@ rsm::sync_with_backups()
 }
 
 
+/**
+ * @brief rsm::sync_with_primary
+ *
+ * @return true if , false otherwise
+ */
 bool
 rsm::sync_with_primary()
 {
@@ -214,6 +226,12 @@ rsm::statetransfer(std::string m)
 	 m.c_str(), last_myvs.vid, last_myvs.seqno);
 }
 
+
+/**
+ * @brief rsm::statetransferdone
+ * @param m
+ * @return  if , false otherwise
+ */
 bool
 rsm::statetransferdone(std::string m) {
     // For lab 6
@@ -281,17 +299,39 @@ rsm::execute(int procno, std::string req)
   return rep1.str();
 }
 
-//
-// Clients call client_invoke to invoke a procedure on the replicated state
-// machine: the primary receives the request, assigns it a sequence
-// number, and invokes it on all members of the replicated state
-// machine.
-//
+
+/**
+ * @brief rsm::client_invoke
+ * Clients call client_invoke to invoke a procedure on the replicated state
+ * machine: the primary receives the request, assigns it a sequence
+ * number, and invokes it on all members of the replicated state machine.
+ *
+ * @param procno
+ * @param req
+ * @param r
+ * @return rsm_client_protocol::status
+ */
 rsm_client_protocol::status
 rsm::client_invoke(int procno, std::string req, std::string &r)
 {
+    pthread_mutex_lock(&rsm_mutex);
     int ret = rsm_protocol::OK;
-    // For lab 6
+
+    if( inviewchange ) {
+        ret = rsm_client_protocol::BUSY;
+    }
+    else {
+        if( amiprimary() ){
+            ret = rsm_client_protocol::NOTPRIMARY;
+        }
+        else {
+
+            r = execute(procno,req);
+        }
+    }
+
+    pthread_mutex_unlock(&rsm_mutex);
+
     return ret;
 }
 
@@ -302,11 +342,31 @@ rsm::client_invoke(int procno, std::string req, std::string &r)
 // the replica must execute requests in order (with no gaps)
 // according to requests' seqno
 
+/**
+ * @brief rsm::invoke
+ * The primary calls the internal invoke at each member of the
+ * replicated state machine, the replica must execute requests in order
+ * (with no gaps)according to requests' seqno
+ *
+ * @param proc
+ * @param vs
+ * @param req
+ * @param dummy
+ * @return
+ */
 rsm_protocol::status
 rsm::invoke(int proc, viewstamp vs, std::string req, int &dummy)
 {
-    rsm_protocol::status ret = rsm_protocol::OK;
-    // For lab 6
+    pthread_mutex_lock(&rsm_mutex);
+    rsm_protocol::status ret = rsm_protocol::ERR;
+    if( proc == vs.seqno ) {
+        if( amiprimary() == false ) {
+            execute(proc, req);
+            ret = rsm_protocol::OK;
+        }
+    }
+
+    pthread_mutex_unlock(&rsm_mutex);
     return ret;
 }
 

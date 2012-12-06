@@ -5,11 +5,12 @@
 #define lock_server_h
 
 #include <string>
+#include "rsm.h"
 #include "lock_protocol.h"
 #include "lock_client.h"
 #include "rpc.h"
 
-class lock_server {
+class lock_server : rsm_state_transfer {
 
 private:
     class rsm *rsm;
