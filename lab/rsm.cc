@@ -325,7 +325,6 @@ rsm::client_invoke(int procno, std::string req, std::string &r)
             ret = rsm_client_protocol::NOTPRIMARY;
         }
         else {
-
             r = execute(procno,req);
         }
     }
@@ -335,12 +334,7 @@ rsm::client_invoke(int procno, std::string req, std::string &r)
     return ret;
 }
 
-//
-// The primary calls the internal invoke at each member of the
-// replicated state machine
-//
-// the replica must execute requests in order (with no gaps)
-// according to requests' seqno
+
 
 /**
  * @brief rsm::invoke

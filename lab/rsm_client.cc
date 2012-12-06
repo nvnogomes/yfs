@@ -27,7 +27,7 @@ rsm_client::rsm_client(std::string dst)
     printf("rsm_client: done\n");
 }
 
-/**
+/** lab6
  * Assumes caller holds rsm_client_mutex
  * @brief rsm_client::primary_failure
  */
