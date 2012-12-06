@@ -1,6 +1,7 @@
 *.[oad]
 *~
 *.log
+rsm_tester
 lock_demo
 lock_server
 lock_tester
