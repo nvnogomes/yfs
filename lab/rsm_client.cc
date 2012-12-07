@@ -30,12 +30,15 @@ rsm_client::rsm_client(std::string dst)
 /** lab6
  * @brief rsm_client::primary_failure
  * should make it forget about the failed replica and ask a different replica
- * for an updated list of members. Then invoke() should retry as before.
+ * for an updated list of members.
  */
 void
 rsm_client::primary_failure()
 {
-
+    bool retVal;
+    do {
+        retVal = init_members(false);
+    }while( retVal == false );
 }
 
 rsm_protocol::status
