@@ -136,9 +136,9 @@ rsm::rsm(std::string _first, std::string _me)
 void
 rsm::reg1(int proc, handler *h)
 {
-  assert(pthread_mutex_lock(&rsm_mutex)==0);
-  procs[proc] = h;
-  assert(pthread_mutex_unlock(&rsm_mutex)==0);
+    assert(pthread_mutex_lock(&rsm_mutex)==0);
+    procs[proc] = h;
+    assert(pthread_mutex_unlock(&rsm_mutex)==0);
 }
 
 // The recovery thread runs this function
@@ -169,7 +169,7 @@ rsm::recovery()
 }
 
 
-/**
+/** lab6
  * @brief rsm::sync_with_backups
  *
  * @return true if , false otherwise
@@ -182,7 +182,7 @@ rsm::sync_with_backups()
 }
 
 
-/**
+/** lab6
  * @brief rsm::sync_with_primary
  *
  * @return true if , false otherwise
@@ -203,37 +203,38 @@ bool
 rsm::statetransfer(std::string m)
 {
     rsm_protocol::transferres r;
-  handle h(m);
-  int ret;
-  printf("rsm::statetransfer: contact %s w. my last_myvs(%d,%d)\n",
-	 m.c_str(), last_myvs.vid, last_myvs.seqno);
-  if (h.get_rpcc()) {
-    assert(pthread_mutex_unlock(&rsm_mutex)==0);
-    ret = h.get_rpcc()->call(rsm_protocol::transferreq, cfg->myaddr(),
-			     last_myvs, r, rpcc::to(1000));
-    assert(pthread_mutex_lock(&rsm_mutex)==0);
-  }
-  if (h.get_rpcc() == 0 || ret != rsm_protocol::OK) {
-    printf("rsm::statetransfer: couldn't reach %s %lx %d\n", m.c_str(),
-	   (long unsigned) h.get_rpcc(), ret);
-    return false;
-  }
-  if (stf && last_myvs != r.last) {
-    stf->unmarshal_state(r.state);
-  }
-  last_myvs = r.last;
-  printf("rsm::statetransfer transfer from %s success, vs(%d,%d)\n",
-	 m.c_str(), last_myvs.vid, last_myvs.seqno);
+    handle h(m);
+    int ret;
+    printf("rsm::statetransfer: contact %s w. my last_myvs(%d,%d)\n",
+           m.c_str(), last_myvs.vid, last_myvs.seqno);
+    if (h.get_rpcc()) {
+        assert(pthread_mutex_unlock(&rsm_mutex)==0);
+        ret = h.get_rpcc()->call(rsm_protocol::transferreq, cfg->myaddr(),
+                                 last_myvs, r, rpcc::to(1000));
+        assert(pthread_mutex_lock(&rsm_mutex)==0);
+    }
+    if (h.get_rpcc() == 0 || ret != rsm_protocol::OK) {
+        printf("rsm::statetransfer: couldn't reach %s %lx %d\n", m.c_str(),
+               (long unsigned) h.get_rpcc(), ret);
+        return false;
+    }
+    if (stf && last_myvs != r.last) {
+        stf->unmarshal_state(r.state);
+    }
+    last_myvs = r.last;
+    printf("rsm::statetransfer transfer from %s success, vs(%d,%d)\n",
+           m.c_str(), last_myvs.vid, last_myvs.seqno);
 }
 
 
-/**
+/** lab6
  * @brief rsm::statetransferdone
  * @param m
  * @return  if , false otherwise
  */
 bool
 rsm::statetransferdone(std::string m) {
+    stf->marshal_state();
     // For lab 6
     return true;
 }
@@ -264,43 +265,58 @@ rsm::join(std::string m) {
 }
 
 
-/*
- * Config informs rsm whenever it has successfully
- * completed a view change
- */
 
+/** lab5 lab6
+ * @brief rsm::commit_change Config informs rsm whenever it has successfully
+ * completed a view change
+ *
+ * called after paxos reached an agreement on the next new view
+ */
 void
 rsm::commit_change()
 {
     pthread_mutex_lock(&rsm_mutex);
-    // Lab 7:
-    // - If I am not part of the new view, start recovery
-    set_primary();
-    if (!cfg->ismember(cfg->myaddr())) {
-        pthread_cond_signal(&recovery_cond);
+
+    /* inviewchange variable is set to true, indicating that this node
+     * needs to recover with the rsm::recovery() method.
+     */
+    if( inviewchange ) {
+        recovery();
     }
+
+    //    set_primary();
+    //    if (!cfg->ismember(cfg->myaddr())) {
+    //        pthread_cond_signal(&recovery_cond);
+    //    }
     pthread_mutex_unlock(&rsm_mutex);
 }
 
-
+/**
+ * @brief rsm::execute  unmarshalls the RSM representation of a client's RPC
+ * and executes it using the registered handler.
+ *
+ * @param procno - number of the client process
+ * @param req - requirement
+ * @return unmarshalled RPC
+ */
 std::string
 rsm::execute(int procno, std::string req)
 {
-  printf("execute\n");
-  handler *h = procs[procno];
-  assert(h);
-  unmarshall args(req);
-  marshall rep;
-  std::string reps;
-  rsm_protocol::status ret = h->fn(args, rep);
-  marshall rep1;
-  rep1 << ret;
-  rep1 << rep.str();
-  return rep1.str();
+    printf("execute\n");
+    handler *h = procs[procno];
+    assert(h);
+    unmarshall args(req);
+    marshall rep;
+    std::string reps;
+    rsm_protocol::status ret = h->fn(args, rep);
+    marshall rep1;
+    rep1 << ret;
+    rep1 << rep.str();
+    return rep1.str();
 }
 
 
-/**
+/** lab6
  * @brief rsm::client_invoke
  * Clients call client_invoke to invoke a procedure on the replicated state
  * machine: the primary receives the request, assigns it a sequence
@@ -315,28 +331,58 @@ rsm_client_protocol::status
 rsm::client_invoke(int procno, std::string req, std::string &r)
 {
     pthread_mutex_lock(&rsm_mutex);
-    int ret = rsm_protocol::OK;
 
     if( inviewchange ) {
-        ret = rsm_client_protocol::BUSY;
-    }
-    else {
-        if( amiprimary() ){
-            ret = rsm_client_protocol::NOTPRIMARY;
-        }
-        else {
-            r = execute(procno,req);
-        }
+        printf("rsm::client_invoke: inviewchange\n");
+        return rsm_client_protocol::BUSY;
     }
 
+    if( amiprimary() == false ){
+        printf("rsm::client_invoke: notprimary\n");
+        return rsm_client_protocol::NOTPRIMARY;
+    }
+
+
+    // the next viewstamp number in sequence
+    myvs.seqno += 1;
+
+    // invoke RPC to all slaves in the current view
+    std::vector<std::string> members;
+    client_members(procno, members);
+
+    for( int i; i < members.size(); i++) {
+
+        // not sending for itself
+        if( cfg->myaddr().compare( members[i] ) == 0 ) {
+            continue;
+        }
+
+        int dummy;
+        rsm_protocol::status status;
+
+        handle h( members[i] );
+        status = h.get_rpcc()->call(rsm_protocol::invoke, procno,
+                                    last_myvs, req, r, dummy , rpcc::to(1000));
+
+        // slave times out
+        if( status != rsm_protocol::OK) {
+            // call instance paxos
+        }
+
+        // step4
+        breakpoint1();
+        partition1();
+    }
+
+    r = execute(procno,req);
     pthread_mutex_unlock(&rsm_mutex);
 
-    return ret;
+    return rsm_client_protocol::OK;
 }
 
 
 
-/**
+/** lab6
  * @brief rsm::invoke
  * The primary calls the internal invoke at each member of the
  * replicated state machine, the replica must execute requests in order
@@ -353,13 +399,18 @@ rsm::invoke(int proc, viewstamp vs, std::string req, int &dummy)
 {
     pthread_mutex_lock(&rsm_mutex);
     rsm_protocol::status ret = rsm_protocol::ERR;
-    if( proc == vs.seqno ) {
+    if( vs.seqno == last_myvs.seqno ) {
         if( amiprimary() == false ) {
             execute(proc, req);
             ret = rsm_protocol::OK;
+
+            // step4
+            //breakpoint1();
+            //partition1();
         }
     }
-
+    // step4
+    //breakpoint2();
     pthread_mutex_unlock(&rsm_mutex);
     return ret;
 }
@@ -373,10 +424,10 @@ rsm::transferreq(std::string src, viewstamp last, rsm_protocol::transferres &r)
     assert(pthread_mutex_lock(&rsm_mutex)==0);
     int ret = rsm_protocol::OK;
     printf("transferreq from %s (%d,%d) vs (%d,%d)\n", src.c_str(),
-	 last.vid, last.seqno, last_myvs.vid, last_myvs.seqno);
-  if (stf && last != last_myvs)
-    r.state = stf->marshal_state();
-  r.last = last_myvs;
+           last.vid, last.seqno, last_myvs.vid, last_myvs.seqno);
+    if (stf && last != last_myvs)
+        r.state = stf->marshal_state();
+    r.last = last_myvs;
     assert(pthread_mutex_unlock(&rsm_mutex)==0);
     return ret;
 }
@@ -546,11 +597,11 @@ rsm::breakpoint2()
 void
 rsm::partition1()
 {
-  if (dopartition) {
-    net_repair_wo(false);
-    dopartition = false;
-    partitioned = true;
-  }
+    if (dopartition) {
+        net_repair_wo(false);
+        dopartition = false;
+        partitioned = true;
+    }
 }
 
 rsm_test_protocol::status

@@ -32,11 +32,17 @@ pthread_mutex_t mutex;
 pthread_cond_t freetogo;
 
 
+/** lab6
+ * @brief lock_server::lock_server default constructor
+ *
+ * @param _rsm replication state machine
+ */
 lock_server::lock_server(class rsm *_rsm):
     rsm(_rsm), nacquire (0)
 {
     pthread_mutex_init(&mutex, NULL);
     pthread_cond_init (&freetogo, NULL);
+    rsm->set_state_transfer(this);
 }
 
 lock_protocol::status
@@ -49,11 +55,10 @@ lock_server::stat(int clt, lock_protocol::lockid_t lid, int &r)
     return lock_protocol::OK;
 }
 
-/*
- * ACQUIRE
- */
-/**
+
+/** lab6
  * @brief lock_server::acquire acquires block
+ * only the primary replies to the client
  *
  * @param clt - client id requesting the block acquire
  * @param lid - block inum to acquire
@@ -81,6 +86,7 @@ lock_server::acquire(int clt, lock_protocol::lockid_t lid, int &r) {
 
 /** lab6
  * @brief lock_server::release
+ * only the primary replies to the client
  *
  * @param clt - client id requesting the block release
  * @param lid - block inum to release
@@ -93,7 +99,7 @@ lock_server::release(int clt, lock_protocol::lockid_t lid, int &r) {
     if( rsm->amiprimary() ) {
         if(blockMap[lid].first == true && blockMap[lid].second == clt) {
             blockMap[lid] = std::make_pair(false, -1);
-            pthread_cond_signal(&freetogo);
+//            pthread_cond_signal(&freetogo);
         }
 
         nacquire--;
